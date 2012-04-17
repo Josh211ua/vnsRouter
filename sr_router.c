@@ -103,7 +103,7 @@ void prettyprintIP(uint32_t ipaddr){
         octet[i]=(ipaddr >> (i*8) ) & 0xFF;
     }
     // sprintf(output,"%d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
-    printf("%d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
+    printf("%d.%d.%d.%d", octet[0],octet[1],octet[2],octet[3]);
     // return output;
 }
 
