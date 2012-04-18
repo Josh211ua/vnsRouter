@@ -24,6 +24,7 @@ void prettyprintIP(uint32_t ipaddr);
 void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
+void printIpHeader(struct ip* iphdr);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -192,4 +193,21 @@ void printArpHeader(struct sr_arphdr* ahdr) {
     Debug("\ntip: ");
     prettyprintIP(ahdr->ar_tip);
     Debug("\n");
+}
+
+/*---------------------------------------------------------------------
+ * Method: printIpHeader
+ * Scope: Local
+ * Purpose: Debugging
+ *---------------------------------------------------------------------*/
+void printIpHeader(struct ip* iphdr) {
+    Debug("tos: %d\n",        iphdr->ip_tos );
+    Debug("len: %d\n", ntohs( iphdr->ip_len));
+    Debug("id: %d\n",  ntohs( iphdr->ip_id ));
+    Debug("off: %d\n", ntohs( iphdr->ip_off));
+    Debug("ttl: %d\n",        iphdr->ip_ttl );
+    Debug("p: %d\n",          iphdr->ip_p   );
+    Debug("sum: %d\n", ntohs( iphdr->ip_sum));
+    Debug("src: %s\n", inet_ntoa(iphdr->ip_src));
+    Debug("dst: %s\n", inet_ntoa(iphdr->ip_dst));
 }
