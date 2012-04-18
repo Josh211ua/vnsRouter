@@ -22,6 +22,8 @@
 
 void prettyprintIP(uint32_t ipaddr);
 void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
+void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
+void printArpHeader(struct sr_arphdr* ahdr);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -108,6 +110,13 @@ void prettyprintIP(uint32_t ipaddr){
 }
 
 void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
+
+    Debug("\nPacket Received:\n");
+    Debug("Ethernet Header:\n");
+    printEthernetHeader(ehdr);
+    printf("Arp Header:\n");
+    printArpHeader(arph);
+
     //ethohdr + aprhrd
     struct sr_ethernet_hdr newe_hdr;
     struct sr_arphdr newa_hdr;
@@ -120,18 +129,25 @@ void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_ins
     memcpy(newe_hdr.ether_dhost,ehdr->ether_shost,6);
     // newa_hdr.ether_shost = ehdr->ether_dhost;
     memcpy(newe_hdr.ether_shost,sr->if_list->addr,6);
-    newe_hdr.ether_type = ehdr->ether_type;
+    newe_hdr.ether_type = htons(ETHERTYPE_ARP);
 
     newa_hdr.ar_hrd = arph->ar_hrd;
     newa_hdr.ar_pro = arph->ar_pro;
     newa_hdr.ar_hln = arph->ar_hln;
     newa_hdr.ar_pln = arph->ar_pln;
-    newa_hdr.ar_op = ARP_REPLY;
+    newa_hdr.ar_op = htons(ARP_REPLY);
     memcpy(newa_hdr.ar_sha,sr->if_list->addr,6);
     newa_hdr.ar_sip = arph->ar_tip;
     newa_hdr.ar_tip = arph->ar_sip;
     // newa_hdr.ar_tha = arph->ar_sha;
     memcpy(newa_hdr.ar_tha,arph->ar_sha,6);
+
+    Debug("\nPacket to send:\n");
+    Debug("Ethernet Header:\n");
+    printEthernetHeader(&newe_hdr);
+    printf("Arp Header:\n");
+    printArpHeader(&newa_hdr);
+
 
     //then send
     // int sr_send_packet(struct sr_instance* sr /* borrowed */,
@@ -148,6 +164,32 @@ void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_ins
 }
 
 /*---------------------------------------------------------------------
- * Method:
- *
+ * Method: printEthernetHeader
+ * Scope: Local
+ * Purpose: Debugging
  *---------------------------------------------------------------------*/
+void printEthernetHeader(struct sr_ethernet_hdr* ehdr) {
+    Debug("dhost: ");
+    DebugMAC(ehdr->ether_dhost);
+    Debug("\nshost: ");
+    DebugMAC(ehdr->ether_shost);
+    Debug("\ntype: %x\n", ntohs(ehdr->ether_type));
+}
+
+/*---------------------------------------------------------------------
+ * Method: printArpHeader
+ * Scope: Local
+ * Purpose: Debugging
+ *---------------------------------------------------------------------*/
+void printArpHeader(struct sr_arphdr* ahdr) {
+    Debug("op: %d", ntohs(ahdr->ar_op));
+    Debug("\nsha: ");
+    DebugMAC(ahdr->ar_sha);
+    Debug("\nsip: ");
+    prettyprintIP(ahdr->ar_sip);
+    Debug("\ntha: ");
+    DebugMAC(ahdr->ar_tha);
+    Debug("\ntip: ");
+    prettyprintIP(ahdr->ar_tip);
+    Debug("\n");
+}
