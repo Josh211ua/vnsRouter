@@ -11,6 +11,7 @@
  *
  **********************************************************************/
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
@@ -28,7 +29,7 @@ void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
 void printIcmpHeader(struct icmp_hdr* icmp_h);
-bool iAmDestination(struct in_addr* ip_src);
+bool iAmDestination(struct in_addr* ip_src,struct sr_instance* sr);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -103,11 +104,11 @@ void sr_handlepacket(struct sr_instance* sr,
         printIpHeader(ip_hdr);
 
         // Handle ICMP packets to me
-        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1 && 
-                iAmDestination(&(ip_hdr->ip_src))) {
+        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1 &&
+                iAmDestination(&(ip_hdr->ip_dst), sr)) {
             struct icmp_hdr *icmp_h = 0;
             icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
-                   sizeof(struct ip)); 
+                   sizeof(struct ip));
             Debug("ICMP Header:\n");
             printIcmpHeader(icmp_h);
             // Handle ICMP Echo Requests
@@ -116,6 +117,7 @@ void sr_handlepacket(struct sr_instance* sr,
         }
         // Handle Routing Packets to others
         else {
+            Debug("not for me\n");
         }
     }
     else if (e_hdr->ether_type == htons(IPPROTO_ICMP)) {
@@ -135,16 +137,24 @@ void sr_handlepacket(struct sr_instance* sr,
  * Scope: Local
  *
  *---------------------------------------------------------------------*/
-void prettyprintIP(uint32_t ipaddr){
+char* prettyprintIPHelper(uint32_t ipaddr){
     // char output[15];
     unsigned char octet[4] = {0,0,0,0};
     for (int i=0;i<4;i++){
         octet[i]=(ipaddr >> (i*8) ) & 0xFF;
     }
     // sprintf(output,"%d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
-    printf("%d.%d.%d.%d", octet[0],octet[1],octet[2],octet[3]);
-    // return output;
+    char * output = malloc(15 * sizeof(char)); //127.127.127.127
+    sprintf(output, "%d.%d.%d.%d", octet[0],octet[1],octet[2],octet[3]);
+    return output;
 }
+
+void prettyprintIP(uint32_t ipaddr){
+    char * pretty = prettyprintIPHelper(ipaddr);
+    printf("%s", pretty);
+    free(pretty);
+}
+
 
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
 
@@ -189,8 +199,10 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
-bool iAmDestination(struct in_addr* ip_src) {
-    return true;
+bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
+    char* fromsr = prettyprintIPHelper(sr->if_list->ip);
+    char * frompacket =inet_ntoa(*ip_dest);
+    return (strncmp(fromsr, frompacket, 15) == 0);
 }
 
 /*---------------------------------------------------------------------
