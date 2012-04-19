@@ -74,19 +74,29 @@ void sr_handlepacket(struct sr_instance* sr,
     struct sr_ethernet_hdr* e_hdr = 0;
     e_hdr = (struct sr_ethernet_hdr*)packet;
 
-    printf("*** -> Received packet of length %d \n",len);
+    Debug("*** -> Received packet of length %d \n",len);
+    Debug("Ethernet Header:\n");
+    printEthernetHeader(e_hdr);
+
     if (e_hdr->ether_type == htons(ETHERTYPE_ARP)) {
         struct sr_arphdr*       a_hdr = 0;
         a_hdr = (struct sr_arphdr*)(packet + sizeof(struct sr_ethernet_hdr));
-        printf("\tARP:");
-        prettyprintIP(a_hdr->ar_tip);
-        printf("\n");
+
+        Debug("\nPacket was an Arp:\n");
+        Debug("Arp Header:\n");
+        printArpHeader(a_hdr);
 
         //send ARP Reply "YES!"
         sendArpReply(e_hdr,a_hdr,sr,interface);
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
-        printf("\tIP\n");
+
+        struct ip* ip_hdr = 0;
+        ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
+
+        Debug("\nPacket was an IP:\n");
+        Debug("IP Header:\n");
+        printIpHeader(ip_hdr);
     }
     else if (e_hdr->ether_type == htons(IPPROTO_ICMP)) {
         printf("\tICMP\n");
@@ -111,12 +121,6 @@ void prettyprintIP(uint32_t ipaddr){
 }
 
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
-
-    Debug("\nPacket Received:\n");
-    Debug("Ethernet Header:\n");
-    printEthernetHeader(ehdr);
-    printf("Arp Header:\n");
-    printArpHeader(arph);
 
     // Allocate a packet for the buffer
     unsigned int len = sizeof(struct sr_ethernet_hdr)+ sizeof(struct sr_arphdr);
