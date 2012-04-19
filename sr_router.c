@@ -118,36 +118,35 @@ void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_ins
     printf("Arp Header:\n");
     printArpHeader(arph);
 
-    //ethohdr + aprhrd
-    struct sr_ethernet_hdr newe_hdr;
-    struct sr_arphdr newa_hdr;
+    // Allocate a packet for the buffer
+    unsigned int len = sizeof(struct sr_ethernet_hdr)+ sizeof(struct sr_arphdr);
+    uint8_t buf[len];
 
-    //     uint8_t  ether_dhost[ETHER_ADDR_LEN];    /* destination ethernet address */
-    // uint8_t  ether_shost[ETHER_ADDR_LEN];    /* source ethernet address */
-    // uint16_t ether_type;                     /* packet type ID */
+    // Insert ethernet header
+    struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
+    memcpy(newe_hdr->ether_dhost,ehdr->ether_shost,6);
+    memcpy(newe_hdr->ether_shost,sr->if_list->addr,6);
+    newe_hdr->ether_type = htons(ETHERTYPE_ARP);
 
-    // newe_hdr.ether_dhost = ehdr->ether_shost;
-    memcpy(newe_hdr.ether_dhost,ehdr->ether_shost,6);
-    // newa_hdr.ether_shost = ehdr->ether_dhost;
-    memcpy(newe_hdr.ether_shost,sr->if_list->addr,6);
-    newe_hdr.ether_type = htons(ETHERTYPE_ARP);
+    // Insert arp header
+    struct sr_arphdr *newa_hdr = (struct sr_arphdr*) (buf + sizeof(struct sr_ethernet_hdr));
 
-    newa_hdr.ar_hrd = arph->ar_hrd;
-    newa_hdr.ar_pro = arph->ar_pro;
-    newa_hdr.ar_hln = arph->ar_hln;
-    newa_hdr.ar_pln = arph->ar_pln;
-    newa_hdr.ar_op = htons(ARP_REPLY);
-    memcpy(newa_hdr.ar_sha,sr->if_list->addr,6);
-    newa_hdr.ar_sip = arph->ar_tip;
-    newa_hdr.ar_tip = arph->ar_sip;
-    // newa_hdr.ar_tha = arph->ar_sha;
-    memcpy(newa_hdr.ar_tha,arph->ar_sha,6);
+    newa_hdr->ar_hrd = arph->ar_hrd;
+    newa_hdr->ar_pro = arph->ar_pro;
+    newa_hdr->ar_hln = arph->ar_hln;
+    newa_hdr->ar_pln = arph->ar_pln;
+    newa_hdr->ar_op = htons(ARP_REPLY);
+    memcpy(newa_hdr->ar_sha,sr->if_list->addr,6);
+    newa_hdr->ar_sip = arph->ar_tip;
+    newa_hdr->ar_tip = arph->ar_sip;
+    // newa_hdr->ar_tha = arph->ar_sha;
+    memcpy(newa_hdr->ar_tha,arph->ar_sha,6);
 
     Debug("\nPacket to send:\n");
     Debug("Ethernet Header:\n");
-    printEthernetHeader(&newe_hdr);
+    printEthernetHeader(newe_hdr);
     printf("Arp Header:\n");
-    printArpHeader(&newa_hdr);
+    printArpHeader(newa_hdr);
 
 
     //then send
@@ -155,10 +154,6 @@ void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_ins
     //                      uint8_t* buf /* borrowed */ ,
     //                      unsigned int len,
     //                      const char* iface /* borrowed */)
-    unsigned int len = sizeof(struct sr_ethernet_hdr)+ sizeof(struct sr_arphdr);
-    uint8_t buf[len];
-    memcpy(&buf, &newe_hdr, sizeof(struct sr_ethernet_hdr));
-    memcpy(&buf + sizeof(struct sr_ethernet_hdr), &newa_hdr, sizeof(struct sr_arphdr));
     sr_send_packet(sr, buf,len, interface);
     printf("said yes!\n");
 
