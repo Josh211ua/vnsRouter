@@ -24,12 +24,17 @@
 #include "sr_icmp_proto.h"
 
 void prettyprintIP(uint32_t ipaddr);
+void respondToEchoRequest(struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr,
+       struct icmp_hdr* icmp_hdr, struct sr_instance* sr, char* interface);
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
 void printIcmpHeader(struct icmp_hdr* icmp_h);
 bool iAmDestination(struct in_addr* ip_src,struct sr_instance* sr);
+void sendIcmpError(struct sr_instance* sr, char* interface, struct sr_ethernet_hdr* e_hdr);
+void route(struct sr_instance* sr, uint8_t* packet, unsigned int len, 
+        char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -83,7 +88,10 @@ void sr_handlepacket(struct sr_instance* sr,
     Debug("Ethernet Header:\n");
     printEthernetHeader(e_hdr);
 
+    // Case on type of packet
     if (e_hdr->ether_type == htons(ETHERTYPE_ARP)) {
+        // ARP:
+        //
         struct sr_arphdr*       a_hdr = 0;
         a_hdr = (struct sr_arphdr*)(packet + sizeof(struct sr_ethernet_hdr));
 
@@ -91,10 +99,19 @@ void sr_handlepacket(struct sr_instance* sr,
         Debug("Arp Header:\n");
         printArpHeader(a_hdr);
 
-        //send ARP Reply "YES!"
-        sendArpReply(e_hdr,a_hdr,sr,interface);
+        if(a_hdr->ar_op == ntohs(ARP_REQUEST)) {
+            // Arp request
+            // TODO: Add to Cache
+            sendArpReply(e_hdr,a_hdr,sr,interface);
+        } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
+            // Arp reply
+            Debug("ARP reply is not implemented");
+        } else {
+            Debug("ARP packet received with bad op code.");
+        }
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
+        // IP
 
         struct ip* ip_hdr = 0;
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
@@ -103,31 +120,49 @@ void sr_handlepacket(struct sr_instance* sr,
         Debug("IP Header:\n");
         printIpHeader(ip_hdr);
 
-        // Handle ICMP packets to me
-        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1 &&
-                iAmDestination(&(ip_hdr->ip_dst), sr)) {
+        // ICMP
+        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1) {
             struct icmp_hdr *icmp_h = 0;
             icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
                    sizeof(struct ip));
             Debug("ICMP Header:\n");
             printIcmpHeader(icmp_h);
-            // Handle ICMP Echo Requests
-            if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
+
+            // Case on ICMP Type:
+            if (icmp_h->icmp_type == 30 && icmp_h->icmp_code == 0) {
+                // Traceroute:
+                Debug("Reply to Traceroute not implemented");
+                if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
+                    Debug("Decrement TTD not implemented (Don't forget to recalculate checksum)");
+                    route(sr, packet, len, interface, e_hdr, ip_hdr);
+                }
+            } else if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
+                // Echo Request:
+                if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
+                    Debug("ICMP Echo Request not implemented\n");
+                } else {
+                    route(sr, packet, len, interface, e_hdr, ip_hdr);
+                }
+            } else {
+                // Other ICMPs
+                if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
+                    sendIcmpError(sr, interface, e_hdr);
+                } else {
+                    route(sr, packet, len, interface, e_hdr, ip_hdr);
+                }
             }
         }
-        // Handle Routing Packets to others
+        // Not ICMP
         else {
-            Debug("not for me\n");
+            if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
+                sendIcmpError(sr, interface, e_hdr);
+            } else {
+                route(sr, packet, len, interface, e_hdr, ip_hdr);
+            }
         }
     }
     else if (e_hdr->ether_type == htons(IPPROTO_ICMP)) {
-
-        struct ip* ip_hdr = 0;
-        ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
-
-        Debug("\nPacket was an ICMP:\n");
-        Debug("IP Header:\n");
-        printIpHeader(ip_hdr);
+        Debug("Something had type IPPROTO_ICMP...I'm confused\n");
     }
 
 }/* end sr_ForwardPacket */
@@ -201,6 +236,25 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
+void respondToEchoRequest(struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr,
+       struct icmp_hdr* icmp_hdr, struct sr_instance* sr, char* interface) {
+
+    // Allocate a packet for the buffer
+    //unsigned int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + 
+     //   sizeof(struct icmp_hdr);
+    //uint8_t buf[len];
+
+    // Insert ethernet header
+    //struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
+    //memcpy(newe_hdr->ether_dhost,ehdr->ether_shost,6);
+    //memcpy(newe_hdr->ether_shost,ehdr->ether_dhost,6);
+    //newe_hdr->ether_type = htons(ETHERTYPE_ARP);
+
+
+    //sr_send_packet(sr, buf,len, interface);
+    //printf("sent ping reply!\n");
+}
+
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
     char* fromsr = prettyprintIPHelper(sr->if_list->ip);
     char * frompacket =inet_ntoa(*ip_dest);
@@ -268,4 +322,13 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
     Debug("Sum: %d\n", ntohs(icmp_h->icmp_sum));
     Debug("Identifier: %d\n", ntohs(icmp_h->icmp_ident));
     Debug("SeqNum: %d\n", ntohs(icmp_h->icmp_seqnum));
+}
+
+void sendIcmpError(struct sr_instance* sr, char* interface, struct sr_ethernet_hdr* e_hdr) {
+    Debug("SendIcmpError not implemented\n");
+}
+
+void route(struct sr_instance* sr, uint8_t* packet, unsigned int len, 
+        char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr) {
+    Debug("route not implemented\n");
 }
