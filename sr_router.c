@@ -137,6 +137,8 @@ void sr_handlepacket(struct sr_instance* sr,
  * Scope: Local
  *
  *---------------------------------------------------------------------*/
+
+//allocates a char[15]; caller responsible for freeing it.
 char* prettyprintIPHelper(uint32_t ipaddr){
     // char output[15];
     unsigned char octet[4] = {0,0,0,0};
@@ -202,7 +204,9 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
     char* fromsr = prettyprintIPHelper(sr->if_list->ip);
     char * frompacket =inet_ntoa(*ip_dest);
-    return (strncmp(fromsr, frompacket, 15) == 0);
+    bool answer = (strncmp(fromsr, frompacket, 15) == 0);
+    free(fromsr);
+    return answer;
 }
 
 /*---------------------------------------------------------------------
