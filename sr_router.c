@@ -19,12 +19,14 @@
 #include "sr_rt.h"
 #include "sr_router.h"
 #include "sr_protocol.h"
+#include "sr_icmp_proto.h"
 
 void prettyprintIP(uint32_t ipaddr);
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
+void printIcmpHeader(struct icmp_hdr* icmp_h);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -97,9 +99,22 @@ void sr_handlepacket(struct sr_instance* sr,
         Debug("\nPacket was an IP:\n");
         Debug("IP Header:\n");
         printIpHeader(ip_hdr);
+
+        struct icmp_hdr *icmp_h = 0;
+        icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
+               sizeof(struct ip)); 
+        Debug("ICMP Header:\n");
+        printIcmpHeader(icmp_h);
     }
     else if (e_hdr->ether_type == htons(IPPROTO_ICMP)) {
-        printf("\tICMP\n");
+
+        struct ip* ip_hdr = 0;
+        ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
+
+        Debug("\nPacket was an ICMP:\n");
+        Debug("IP Header:\n");
+        printIpHeader(ip_hdr);
+
     }
 
 }/* end sr_ForwardPacket */
@@ -209,4 +224,17 @@ void printIpHeader(struct ip* iphdr) {
     Debug("sum: %d\n", ntohs( iphdr->ip_sum));
     Debug("src: %s\n", inet_ntoa(iphdr->ip_src));
     Debug("dst: %s\n", inet_ntoa(iphdr->ip_dst));
+}
+
+/*---------------------------------------------------------------------
+ * Method: printIcmpHeader
+ * Scope: Local
+ * Purpose: Debugging
+ *---------------------------------------------------------------------*/
+void printIcmpHeader(struct icmp_hdr* icmp_h) {
+    Debug("Type: %d\n", icmp_h->icmp_type);
+    Debug("Code: %d\n", icmp_h->icmp_code);
+    Debug("Sum: %d\n", ntohs(icmp_h->icmp_sum));
+    Debug("Identifier: %d\n", ntohs(icmp_h->icmp_ident));
+    Debug("SeqNum: %d\n", ntohs(icmp_h->icmp_seqnum));
 }
