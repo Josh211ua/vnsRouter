@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -27,6 +28,7 @@ void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
 void printIcmpHeader(struct icmp_hdr* icmp_h);
+bool iAmDestination(struct in_addr* ip_src);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -100,11 +102,21 @@ void sr_handlepacket(struct sr_instance* sr,
         Debug("IP Header:\n");
         printIpHeader(ip_hdr);
 
-        struct icmp_hdr *icmp_h = 0;
-        icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
-               sizeof(struct ip)); 
-        Debug("ICMP Header:\n");
-        printIcmpHeader(icmp_h);
+        // Handle ICMP packets to me
+        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1 && 
+                iAmDestination(&(ip_hdr->ip_src))) {
+            struct icmp_hdr *icmp_h = 0;
+            icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
+                   sizeof(struct ip)); 
+            Debug("ICMP Header:\n");
+            printIcmpHeader(icmp_h);
+            // Handle ICMP Echo Requests
+            if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
+            }
+        }
+        // Handle Routing Packets to others
+        else {
+        }
     }
     else if (e_hdr->ether_type == htons(IPPROTO_ICMP)) {
 
@@ -114,7 +126,6 @@ void sr_handlepacket(struct sr_instance* sr,
         Debug("\nPacket was an ICMP:\n");
         Debug("IP Header:\n");
         printIpHeader(ip_hdr);
-
     }
 
 }/* end sr_ForwardPacket */
@@ -176,6 +187,10 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
     sr_send_packet(sr, buf,len, interface);
     printf("said yes!\n");
 
+}
+
+bool iAmDestination(struct in_addr* ip_src) {
+    return true;
 }
 
 /*---------------------------------------------------------------------
