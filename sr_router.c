@@ -21,7 +21,7 @@
 #include "sr_protocol.h"
 
 void prettyprintIP(uint32_t ipaddr);
-void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
+void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
@@ -83,7 +83,7 @@ void sr_handlepacket(struct sr_instance* sr,
         printf("\n");
 
         //send ARP Reply "YES!"
-        sendYes(e_hdr,a_hdr,sr,interface);
+        sendArpReply(e_hdr,a_hdr,sr,interface);
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
         printf("\tIP\n");
@@ -110,7 +110,7 @@ void prettyprintIP(uint32_t ipaddr){
     // return output;
 }
 
-void sendYes(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
+void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
 
     Debug("\nPacket Received:\n");
     Debug("Ethernet Header:\n");
