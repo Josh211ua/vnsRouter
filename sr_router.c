@@ -147,9 +147,7 @@ void sr_handlepacket(struct sr_instance* sr,
                 }
             } else {
                 // Other ICMPs
-                if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
-                    sendIcmpError(sr, interface, e_hdr);
-                } else {
+                if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
                     route(sr, packet, len, interface, e_hdr, ip_hdr);
                 }
             }
