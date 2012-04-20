@@ -141,7 +141,6 @@ void sr_handlepacket(struct sr_instance* sr,
                 // Echo Request:
                 if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
                     respondToIcmpEcho(sr, packet, len, interface, e_hdr, ip_hdr, icmp_h);
-                    Debug("ICMP Echo Request not implemented\n");
                 } else {
                     route(sr, packet, len, interface, e_hdr, ip_hdr);
                 }
