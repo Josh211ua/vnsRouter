@@ -240,7 +240,7 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 uint16_t calculate_check_sum(uint16_t* ip_hdr, size_t len){
     uint32_t sum = 0;
-    for(int i = 0; i < len; i++){
+    for(int i = 0; i < len; i+=sizeof(uint16_t)){
         sum += *(ip_hdr + i);
     }
     uint16_t * nibble = (uint16_t*) (&sum);
@@ -280,13 +280,14 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
             sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
-    newi_hdr->icmp_type = icmp_hdr->icmp_type;
-    newi_hdr->icmp_code = icmp_hdr->icmp_code;
+    newi_hdr->icmp_type = 0;
+    newi_hdr->icmp_code = 0;
+    newi_hdr->icmp_sum = 0;
     newi_hdr->icmp_ident = icmp_hdr->icmp_ident;
     newi_hdr->icmp_seqnum = icmp_hdr->icmp_seqnum;
 
     //Recalculate Check Sum
-    newip_hdr->ip_sum = ip_hdr->ip_sum;
+    newi_hdr->icmp_sum = calculate_check_sum((uint16_t*)newi_hdr,sizeof(struct icmp_hdr));
 
     // Put in data
     int header_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr);
