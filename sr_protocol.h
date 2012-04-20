@@ -39,14 +39,14 @@
 
 #include <sys/types.h>
 #include <arpa/inet.h>
- 
+
 #ifndef IP_MAXPACKET
 #define IP_MAXPACKET 65535
 #endif
 
 /* FIXME
  * ohh how lame .. how very, very lame... how can I ever go out in public
- * again?! /mc 
+ * again?! /mc
  */
 #ifndef __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN 1
@@ -87,8 +87,8 @@ struct ip
     unsigned int ip_v:4;		/* version */
     unsigned int ip_hl:4;		/* header length */
 #else
-#error "Byte ordering ot specified " 
-#endif 
+#error "Byte ordering ot specified "
+#endif
     uint8_t ip_tos;			/* type of service */
     uint16_t ip_len;			/* total length */
     uint16_t ip_id;			/* identification */
@@ -98,13 +98,13 @@ struct ip
 #define	IP_MF 0x2000			/* more fragments flag */
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
     uint8_t ip_ttl;			/* time to live */
-#define IP_MAX_TTL 256
+#define IP_MAX_TTL 255
     uint8_t ip_p;			/* protocol */
     uint16_t ip_sum;			/* checksum */
     struct in_addr ip_src, ip_dst;	/* source and dest address */
   } __attribute__ ((packed)) ;
 
-/* 
+/*
  *  Ethernet packet header prototype.  Too many O/S's define this differently.
  *  Easy enough to solve that and define it here.
  */
@@ -137,7 +137,7 @@ struct sr_ethernet_hdr
 #define ARP_REQUEST 1
 #define ARP_REPLY   2
 
-struct sr_arphdr 
+struct sr_arphdr
 {
     unsigned short  ar_hrd;             /* format of hardware address   */
     unsigned short  ar_pro;             /* format of protocol address   */
