@@ -238,6 +238,39 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
+// Calculate check_sum taken from http://www.microhowto.info/howto/calculate_an_internet_protocol_checksum_in_c.html
+//
+uint16_t calculate_check_sum(void* vdata,size_t length) {
+    // Cast the data pointer to one that can be indexed.
+    char* data=(char*)vdata;
+
+    // Initialise the accumulator.
+    uint32_t acc=0xffff;
+
+    // Handle complete 16-bit blocks.
+    for (size_t i=0;i+1<length;i+=2) {
+        uint16_t word;
+        memcpy(&word,data+i,2);
+        acc+=ntohs(word);
+        if (acc>0xffff) {
+            acc-=0xffff;
+        }
+    }
+
+    // Handle any partial block at the end of the data.
+    if (length&1) {
+        uint16_t word=0;
+        memcpy(&word,data+length-1,1);
+        acc+=ntohs(word);
+        if (acc>0xffff) {
+            acc-=0xffff;
+        }
+    }
+
+    // Return the checksum in network byte order.
+    return htons(~acc);
+}
+/*
 uint16_t calculate_check_sum(uint16_t* ip_hdr, size_t len){
     uint32_t sum = 0;
     for(int i = 0; i < len; i+=sizeof(uint16_t)){
@@ -248,7 +281,7 @@ uint16_t calculate_check_sum(uint16_t* ip_hdr, size_t len){
     *rest = *nibble + *rest;
     return ~(*rest);
 }
-
+*/
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
        unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
        struct ip* ip_hdr, struct icmp_hdr* icmp_hdr) {
@@ -275,7 +308,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newip_hdr->ip_src = ip_hdr->ip_dst;
     newip_hdr->ip_dst = ip_hdr->ip_src;
     //Recalculate Check Sum
-    newip_hdr->ip_sum = calculate_check_sum((uint16_t*)newip_hdr, sizeof(struct ip*));
+    newip_hdr->ip_sum = calculate_check_sum((void*)newip_hdr, sizeof(struct ip*));
 
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
@@ -287,7 +320,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newi_hdr->icmp_seqnum = icmp_hdr->icmp_seqnum;
 
     //Recalculate Check Sum
-    newi_hdr->icmp_sum = calculate_check_sum((uint16_t*)newi_hdr,sizeof(struct icmp_hdr));
+    newi_hdr->icmp_sum = calculate_check_sum((void*)newi_hdr,sizeof(struct icmp_hdr));
 
     // Put in data
     int header_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr);
