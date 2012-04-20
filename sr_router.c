@@ -24,8 +24,9 @@
 #include "sr_icmp_proto.h"
 
 void prettyprintIP(uint32_t ipaddr);
-void respondToEchoRequest(struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr,
-       struct icmp_hdr* icmp_hdr, struct sr_instance* sr, char* interface);
+void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet, 
+        unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr, 
+        struct ip* ip_hdr, struct icmp_hdr* icmp_hdr);
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
@@ -139,6 +140,7 @@ void sr_handlepacket(struct sr_instance* sr,
             } else if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
                 // Echo Request:
                 if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
+                    respondToIcmpEcho(sr, packet, len, interface, e_hdr, ip_hdr, icmp_h);
                     Debug("ICMP Echo Request not implemented\n");
                 } else {
                     route(sr, packet, len, interface, e_hdr, ip_hdr);
@@ -236,10 +238,50 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
-void respondToEchoRequest(struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr,
-       struct icmp_hdr* icmp_hdr, struct sr_instance* sr, char* interface) {
+void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet, 
+       unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr, 
+       struct ip* ip_hdr, struct icmp_hdr* icmp_hdr) {
 
-    // Allocate a packet for the buffer
+    uint8_t buf[len];
+    
+    // Change Ethernet Header
+    struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
+    memcpy(newe_hdr->ether_dhost, e_hdr->ether_shost, ETHER_ADDR_LEN);
+    memcpy(newe_hdr->ether_shost, e_hdr->ether_dhost, ETHER_ADDR_LEN);
+    newe_hdr->ether_type = e_hdr->ether_type;
+
+    // Change Ip Header (src and dst)
+    struct ip *newip_hdr = (struct ip*) (buf + sizeof(struct sr_ethernet_hdr));
+    newip_hdr->ip_hl = ip_hdr->ip_hl;
+    newip_hdr->ip_v = ip_hdr->ip_v;
+    newip_hdr->ip_tos = ip_hdr->ip_tos;
+    newip_hdr->ip_len = ip_hdr->ip_len;
+    newip_hdr->ip_id = ip_hdr->ip_id;
+    newip_hdr->ip_off = ip_hdr->ip_off;
+    newip_hdr->ip_ttl = IP_MAX_TTL;
+    newip_hdr->ip_p = ip_hdr->ip_p;
+    newip_hdr->ip_src = ip_hdr->ip_src;
+    newip_hdr->ip_dst = ip_hdr->ip_dst;
+    //Recalculate Check Sum
+    newip_hdr->icmp_sum = calculate_check_sum(newip_hdr, sizeof(struct ip*));
+
+    // Change Icmp Header
+    struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf + 
+            sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
+    newi_hdr->icmp_type = icmp_hdr->icmp_type;
+    newi_hdr->icmp_code = icmp_hdr->icmp_code;
+    newi_hdr->icmp_ident = icmp_hdr->icmp_ident;
+    newi_hdr->icmp_seqnum = icmp_hdr->icmp_seqnum;
+
+    //Recalculate Check Sum
+    newip_hdr->ip_sum = ip_hdr->ip_sum;
+
+    // Put in data
+    int header_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr);
+    int data_len = len - header_len;
+    uint8_t *data = buf + header_len;
+    memcpy(data, packet + header_len, data_len);
+    
     //unsigned int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + 
      //   sizeof(struct icmp_hdr);
     //uint8_t buf[len];
@@ -251,8 +293,8 @@ void respondToEchoRequest(struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr,
     //newe_hdr->ether_type = htons(ETHERTYPE_ARP);
 
 
-    //sr_send_packet(sr, buf,len, interface);
-    //printf("sent ping reply!\n");
+    sr_send_packet(sr, buf,len, interface);
+    printf("sent ping reply!\n");
 }
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {

@@ -98,6 +98,7 @@ struct ip
 #define	IP_MF 0x2000			/* more fragments flag */
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
     uint8_t ip_ttl;			/* time to live */
+#define IP_MAX_TTL 256
     uint8_t ip_p;			/* protocol */
     uint16_t ip_sum;			/* checksum */
     struct in_addr ip_src, ip_dst;	/* source and dest address */
