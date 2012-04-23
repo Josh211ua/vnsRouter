@@ -17,10 +17,6 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 
-uint16_t my_checksum(size_t bytes, uint16_t buff[]);
-
-uint16_t ip_sum_calc(size_t len_ip_header, uint16_t buff[]);
-
-long rfc_checksum(size_t count, uint8_t *addr);
+uint16_t checksum(size_t bytes, uint8_t buff[]);
 
 #endif

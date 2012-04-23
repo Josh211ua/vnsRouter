@@ -38,7 +38,6 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
         struct sr_ethernet_hdr* e_hdr, struct ip*);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
-uint16_t calculate_check_sum(size_t length, uint16_t* vdata);
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -238,10 +237,6 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
-uint16_t calculate_check_sum(size_t length, uint16_t* vdata) {
-    return my_checksum(length, vdata);
-}
-
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
        unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
        struct ip* ip_hdr, struct icmp_hdr* icmp_hdr) {
@@ -271,7 +266,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newip_hdr->ip_src = ip_hdr->ip_dst;
     newip_hdr->ip_dst = ip_hdr->ip_src;
     //Recalculate Check Sum
-    newip_hdr->ip_sum = calculate_check_sum(10, (uint16_t*)newip_hdr);
+    newip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)newip_hdr);
 /*
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +

@@ -17,77 +17,27 @@ int main(void)
                       0xff01, 0x0000, 0xab43, 0xf240,
                       0x80dc, 0xe075 };
 
-    uint16_t checksum = my_checksum(10, buf2);
+    uint16_t checksum = checksum(10, buf2);
     printf("Checksum: %x\n", checksum);
     printf("Expected: %x\n", 0xa5fa);
     return 0;
 }
 */
 
-uint16_t my_checksum(size_t bytepairs, uint16_t buf[])
+uint16_t checksum(size_t bytepairs, uint8_t buf[])
 {
     uint32_t sum = 0;
-    for(int i = 0; i < bytepairs; i++) {
-        sum += buf[i];
+    for(int i = 0; i < bytepairs; i += 2) {
+        sum += * ((uint16_t*) (buf + i));
+//        sum += buf[i];
     }
 
-    printf("Sum: %x\n", sum);
+    if(bytepairs % 2 == 1) {
+        sum += buf[bytepairs - 1];
+    }
+
     uint16_t top = sum >> 16;
     uint16_t bottom = sum & 0xffff;
-    printf("Top: %x\n", top);
-    printf("Bottom: %x\n", bottom);
     uint16_t value = top + bottom;
-    printf("Top Plus Bottom: %x\n", value);
     return ~value;
 }
-
-
-uint16_t ip_sum_calc(size_t len_ip_header, uint16_t buff[])
-{
-uint16_t word16;
-uint32_t sum=0;
-size_t i;
-    
-    // make 16 bit words out of every two adjacent 8 bit words in the packet
-    // and add them up
-    for (i=0;i<len_ip_header;i=i+1){
-        word16 =((buff[i]<<8)&0xFF00)+(buff[i+1]&0xFF);
-        sum = sum + (uint32_t) buff[i];       
-    }
-    
-    // take only 16 bits out of the 32 bit sum and add up the carries
-    while (sum>>16)
-      sum = (sum & 0xFFFF)+(sum >> 16);
-
-    // one's complement the result
-    sum = ~sum;
-    
-return ((uint16_t) sum);
-}
-
-/* Compute Internet Checksum for "count" bytes
-*         beginning at location "addr".
-*/
-long rfc_checksum(size_t count, uint8_t *addr) {
-    register uint32_t sum = 0;
-
-    while( count > 1 )  {
-       /*  This is the inner loop */
-           sum += * (uint16_t *) addr++;
-           count -= 2;
-    }
-
-       /*  Add left-over byte, if any */
-    if( count > 0 )
-           sum += * (uint8_t *) addr;
-
-    printf("Middle Sum: %x\n", sum);
-    printf("Middle Sum: %d\n", sum);
-
-       /*  Fold 32-bit sum to 16 bits */
-    while (sum>>16)
-       sum = (sum & 0xffff) + (sum >> 16);
-
-    return ~sum;
-}
-
