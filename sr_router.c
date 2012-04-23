@@ -241,8 +241,6 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
        unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
        struct ip* ip_hdr, struct icmp_hdr* icmp_hdr) {
 
-    Debug("Responding to ICMP echo request");
-
     uint8_t buf[len];
     memset(buf, 0, len);
 
@@ -288,7 +286,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
             (uint8_t*) (buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip)));
 
     sr_send_packet(sr, buf,len, interface);
-    printf("sent ping reply!\n");
+    Debug("Sent Icmp Echo Reply\n");
 }
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
@@ -362,7 +360,7 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
 
 void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet, 
         struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr) {
-/*
+
     int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr) + sizeof(struct ip) + 8;
     uint8_t buf[len];
 
@@ -386,7 +384,7 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
     newip_hdr->ip_src = ip_hdr->ip_dst;
     newip_hdr->ip_dst = ip_hdr->ip_src;
     //Recalculate Check Sum
-    newip_hdr->ip_sum = calculate_check_sum(sizeof(struct ip), (uint16_t*)newip_hdr);
+    newip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)newip_hdr);
 
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
@@ -397,17 +395,17 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
     newi_hdr->icmp_ident = 0;
     newi_hdr->icmp_seqnum = 0;
 
-    //Recalculate Check Sum
-    newi_hdr->icmp_sum = calculate_check_sum(sizeof(struct icmp_hdr), (uint16_t*)newi_hdr);
-
     uint8_t *data = buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + 
         sizeof(struct icmp_hdr);
     memcpy(data, packet + sizeof(struct sr_ethernet_hdr), sizeof(struct ip) + 8);
 
+    //Recalculate Check Sum
+    newi_hdr->icmp_sum = checksum(
+            sizeof(struct icmp_hdr) + sizeof(struct ip) + 8,
+            (uint8_t*)newi_hdr);
 
     sr_send_packet(sr, buf, len, interface);
-*/
-    Debug("SendIcmpError not implemented\n");
+    Debug("Sent ICMP port unreachable\n");
 }
 
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
