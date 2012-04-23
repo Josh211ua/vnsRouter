@@ -267,7 +267,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newip_hdr->ip_dst = ip_hdr->ip_src;
     //Recalculate Check Sum
     newip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)newip_hdr);
-/*
+
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
             sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
@@ -277,16 +277,16 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newi_hdr->icmp_ident = icmp_hdr->icmp_ident;
     newi_hdr->icmp_seqnum = icmp_hdr->icmp_seqnum;
 
-    //Recalculate Check Sum
-    newi_hdr->icmp_sum = calculate_check_sum(sizeof(struct icmp_hdr),
-            (uint16_t*)newi_hdr);
-
     // Put in data
     int header_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr);
     int data_len = len - header_len;
     uint8_t *data = buf + header_len;
     memcpy(data, packet + header_len, data_len);
-*/
+
+    //Recalculate Check Sum
+    newi_hdr->icmp_sum = checksum(sizeof(struct icmp_hdr) + data_len,
+            (uint8_t*) (buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip)));
+
     sr_send_packet(sr, buf,len, interface);
     printf("sent ping reply!\n");
 }
