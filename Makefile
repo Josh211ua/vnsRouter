@@ -40,7 +40,7 @@ PURIFY= purify ${PFLAGS}
 
 sr_SRCS = sr_router.c sr_main.c  \
           sr_if.c sr_rt.c sr_vns_comm.c   \
-          sr_dumper.c sha1.c
+          sr_dumper.c sha1.c sr_checksum.c
 
 sr_OBJS = $(patsubst %.c,%.o,$(sr_SRCS))
 sr_DEPS = $(patsubst %.c,.%.d,$(sr_SRCS))
@@ -55,6 +55,9 @@ include $(sr_DEPS)
 
 sr : $(sr_OBJS)
 	$(CC) $(CFLAGS) -o sr $(sr_OBJS) $(LIBS)
+
+checksum : sr_checksum_test.o $(sr_OBJS)
+	$(CC) $(CFLAGS) -o checksum sr_checksum_test.o $(sr_OBJS) $(LIBS)
 
 sr.purify : $(sr_OBJS)
 	$(PURIFY) $(CC) $(CFLAGS) -o sr.purify $(sr_OBJS) $(LIBS)
