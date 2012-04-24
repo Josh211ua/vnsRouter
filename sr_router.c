@@ -22,6 +22,8 @@
 #include "sr_router.h"
 #include "sr_protocol.h"
 #include "sr_icmp_proto.h"
+#include "sr_checksum.h"
+#include "sr_arpcache.h"
 
 void prettyprintIP(uint32_t ipaddr);
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
@@ -33,7 +35,8 @@ void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
 void printIcmpHeader(struct icmp_hdr* icmp_h);
 bool iAmDestination(struct in_addr* ip_src,struct sr_instance* sr);
-void sendIcmpError(struct sr_instance* sr, char* interface, struct sr_ethernet_hdr* e_hdr);
+void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
+        struct sr_ethernet_hdr* e_hdr, struct ip*);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
 /*---------------------------------------------------------------------
@@ -50,6 +53,13 @@ void sr_init(struct sr_instance* sr)
     assert(sr);
 
     /* Add initialization code here! */
+    init_arpcache();
+    Debug("Mac for 171.67.242.68 is ");
+    DebugMAC(getarp("171.67.242.68"));
+    Debug("\n");
+    Debug("Mac for 171.67.242.70 is ");
+    DebugMAC(getarp("171.67.242.70"));
+    Debug("\n");
 
 } /* -- sr_init -- */
 
@@ -122,7 +132,7 @@ void sr_handlepacket(struct sr_instance* sr,
         printIpHeader(ip_hdr);
 
         // ICMP
-        if(ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1) {
+        if(ip_hdr->ip_p == 1) {
             struct icmp_hdr *icmp_h = 0;
             icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
                    sizeof(struct ip));
@@ -146,9 +156,7 @@ void sr_handlepacket(struct sr_instance* sr,
                 }
             } else {
                 // Other ICMPs
-                if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
-                    sendIcmpError(sr, interface, e_hdr);
-                } else {
+                if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
                     route(sr, packet, len, interface, e_hdr, ip_hdr);
                 }
             }
@@ -156,7 +164,7 @@ void sr_handlepacket(struct sr_instance* sr,
         // Not ICMP
         else {
             if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
-                sendIcmpError(sr, interface, e_hdr);
+                sendIcmpError(sr, interface, packet, e_hdr, ip_hdr);
             } else {
                 route(sr, packet, len, interface, e_hdr, ip_hdr);
             }
@@ -237,55 +245,12 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
 
 }
 
-// Calculate check_sum taken from http://www.microhowto.info/howto/calculate_an_internet_protocol_checksum_in_c.html
-//
-uint16_t calculate_check_sum(void* vdata,size_t length) {
-    // Cast the data pointer to one that can be indexed.
-    char* data=(char*)vdata;
-
-    // Initialise the accumulator.
-    uint32_t acc=0xffff;
-
-    // Handle complete 16-bit blocks.
-    for (size_t i=0;i+1<length;i+=2) {
-        uint16_t word;
-        memcpy(&word,data+i,2);
-        acc+=ntohs(word);
-        if (acc>0xffff) {
-            acc-=0xffff;
-        }
-    }
-
-    // Handle any partial block at the end of the data.
-    if (length&1) {
-        uint16_t word=0;
-        memcpy(&word,data+length-1,1);
-        acc+=ntohs(word);
-        if (acc>0xffff) {
-            acc-=0xffff;
-        }
-    }
-
-    // Return the checksum in network byte order.
-    return htons(~acc);
-}
-/*
-uint16_t calculate_check_sum(uint16_t* ip_hdr, size_t len){
-    uint32_t sum = 0;
-    for(int i = 0; i < len; i+=sizeof(uint16_t)){
-        sum += *(ip_hdr + i);
-    }
-    uint16_t * nibble = (uint16_t*) (&sum);
-    uint16_t * rest = (uint16_t*) ((sizeof(uint16_t)) + (&sum));
-    *rest = *nibble + *rest;
-    return ~(*rest);
-}
-*/
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
        unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
        struct ip* ip_hdr, struct icmp_hdr* icmp_hdr) {
 
     uint8_t buf[len];
+    memset(buf, 0, len);
 
     // Change Ethernet Header
     struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
@@ -307,7 +272,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newip_hdr->ip_src = ip_hdr->ip_dst;
     newip_hdr->ip_dst = ip_hdr->ip_src;
     //Recalculate Check Sum
-    newip_hdr->ip_sum = calculate_check_sum((void*)newip_hdr, sizeof(struct ip*));
+    newip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)newip_hdr);
 
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
@@ -318,28 +283,18 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
     newi_hdr->icmp_ident = icmp_hdr->icmp_ident;
     newi_hdr->icmp_seqnum = icmp_hdr->icmp_seqnum;
 
-    //Recalculate Check Sum
-    newi_hdr->icmp_sum = calculate_check_sum((void*)newi_hdr,sizeof(struct icmp_hdr));
-
     // Put in data
     int header_len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr);
     int data_len = len - header_len;
     uint8_t *data = buf + header_len;
     memcpy(data, packet + header_len, data_len);
 
-    //unsigned int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) +
-     //   sizeof(struct icmp_hdr);
-    //uint8_t buf[len];
-
-    // Insert ethernet header
-    //struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
-    //memcpy(newe_hdr->ether_dhost,ehdr->ether_shost,6);
-    //memcpy(newe_hdr->ether_shost,ehdr->ether_dhost,6);
-    //newe_hdr->ether_type = htons(ETHERTYPE_ARP);
-
+    //Recalculate Check Sum
+    newi_hdr->icmp_sum = checksum(sizeof(struct icmp_hdr) + data_len,
+            (uint8_t*) (buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip)));
 
     sr_send_packet(sr, buf,len, interface);
-    printf("sent ping reply!\n");
+    Debug("Sent Icmp Echo Reply\n");
 }
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
@@ -411,8 +366,54 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
     Debug("SeqNum: %d\n", ntohs(icmp_h->icmp_seqnum));
 }
 
-void sendIcmpError(struct sr_instance* sr, char* interface, struct sr_ethernet_hdr* e_hdr) {
-    Debug("SendIcmpError not implemented\n");
+void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet, 
+        struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr) {
+
+    int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr) + sizeof(struct ip) + 8;
+    uint8_t buf[len];
+
+    // Change Ethernet Header
+    struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
+    memcpy(newe_hdr->ether_dhost, e_hdr->ether_shost, ETHER_ADDR_LEN);
+    memcpy(newe_hdr->ether_shost, e_hdr->ether_dhost, ETHER_ADDR_LEN);
+    newe_hdr->ether_type = htons(ETHERTYPE_IP);
+
+    // Change Ip Header (src and dst)
+    struct ip *newip_hdr = (struct ip*) (buf + sizeof(struct sr_ethernet_hdr));
+    newip_hdr->ip_hl = ip_hdr->ip_hl;
+    newip_hdr->ip_v = ip_hdr->ip_v;
+    newip_hdr->ip_tos = 0;
+    newip_hdr->ip_len = len;
+    newip_hdr->ip_id = 0;
+    newip_hdr->ip_off = 0;
+    newip_hdr->ip_ttl = IP_MAX_TTL;
+    newip_hdr->ip_p = 1;
+    newip_hdr->ip_sum = 0;
+    newip_hdr->ip_src = ip_hdr->ip_dst;
+    newip_hdr->ip_dst = ip_hdr->ip_src;
+    //Recalculate Check Sum
+    newip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)newip_hdr);
+
+    // Change Icmp Header
+    struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
+            sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
+    newi_hdr->icmp_type = 3;
+    newi_hdr->icmp_code = 3;
+    newi_hdr->icmp_sum = 0;
+    newi_hdr->icmp_ident = 0;
+    newi_hdr->icmp_seqnum = 0;
+
+    uint8_t *data = buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + 
+        sizeof(struct icmp_hdr);
+    memcpy(data, packet + sizeof(struct sr_ethernet_hdr), sizeof(struct ip) + 8);
+
+    //Recalculate Check Sum
+    newi_hdr->icmp_sum = checksum(
+            sizeof(struct icmp_hdr) + sizeof(struct ip) + 8,
+            (uint8_t*)newi_hdr);
+
+    sr_send_packet(sr, buf, len, interface);
+    Debug("Sent ICMP port unreachable\n");
 }
 
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
