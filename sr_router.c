@@ -23,6 +23,7 @@
 #include "sr_protocol.h"
 #include "sr_icmp_proto.h"
 #include "sr_checksum.h"
+#include "sr_arpcache.h"
 
 void prettyprintIP(uint32_t ipaddr);
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
@@ -52,6 +53,13 @@ void sr_init(struct sr_instance* sr)
     assert(sr);
 
     /* Add initialization code here! */
+    init_arpcache();
+    Debug("Mac for 171.67.242.68 is ");
+    DebugMAC(getarp("171.67.242.68"));
+    Debug("\n");
+    Debug("Mac for 171.67.242.70 is ");
+    DebugMAC(getarp("171.67.242.70"));
+    Debug("\n");
 
 } /* -- sr_init -- */
 
@@ -124,7 +132,7 @@ void sr_handlepacket(struct sr_instance* sr,
         printIpHeader(ip_hdr);
 
         // ICMP
-        if(ip_hdr->ip_p == 1) { //ip_hdr->ip_tos == 0 && ip_hdr->ip_p == 1) {
+        if(ip_hdr->ip_p == 1) {
             struct icmp_hdr *icmp_h = 0;
             icmp_h = (struct icmp_hdr*) (packet + sizeof(struct sr_ethernet_hdr) +
                    sizeof(struct ip));
