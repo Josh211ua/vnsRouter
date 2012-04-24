@@ -111,11 +111,11 @@ void sr_handlepacket(struct sr_instance* sr,
         printArpHeader(a_hdr);
 
         if(a_hdr->ar_op == ntohs(ARP_REQUEST)) {
-            // Arp request
+            // Arp request: reply based on which interface it came in on
             // TODO: Add to Cache
             sendArpReply(e_hdr,a_hdr,sr,interface);
         } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
-            // Arp reply
+            // Arp reply: add to cache, send all the packets in the queue
             Debug("ARP reply is not implemented");
         } else {
             Debug("ARP packet received with bad op code.");
@@ -366,7 +366,7 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
     Debug("SeqNum: %d\n", ntohs(icmp_h->icmp_seqnum));
 }
 
-void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet, 
+void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
         struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr) {
 
     int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr) + sizeof(struct ip) + 8;
@@ -403,7 +403,7 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
     newi_hdr->icmp_ident = 0;
     newi_hdr->icmp_seqnum = 0;
 
-    uint8_t *data = buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + 
+    uint8_t *data = buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) +
         sizeof(struct icmp_hdr);
     memcpy(data, packet + sizeof(struct sr_ethernet_hdr), sizeof(struct ip) + 8);
 

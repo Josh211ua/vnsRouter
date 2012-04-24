@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------
  * file:  sr_if.h
- * date:  Sun Oct 06 14:13:13 PDT 2002 
- * Contact: casado@stanford.edu 
+ * date:  Sun Oct 06 14:13:13 PDT 2002
+ * Contact: casado@stanford.edu
  *
  * Description:
  *
@@ -26,6 +26,12 @@
 
 #define sr_IFACE_NAMELEN 32
 
+struct waitingpacket {
+    uint8_t* data;
+    uint len;
+    struct waitingpacket* next;
+};
+
 struct sr_instance;
 
 /* ----------------------------------------------------------------------------
@@ -41,6 +47,7 @@ struct sr_if
     unsigned char addr[6];
     uint32_t ip;
     uint32_t speed;
+    struct waitingpacket* queue;
     struct sr_if* next;
 };
 
