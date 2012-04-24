@@ -28,7 +28,7 @@
 
 struct waitingpacket {
     uint8_t* data;
-    uint len;
+    unsigned int len;
     struct waitingpacket* next;
 };
 
