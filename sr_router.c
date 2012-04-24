@@ -416,7 +416,33 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
     Debug("Sent ICMP port unreachable\n");
 }
 
+struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
+    struct sr_rt* rt_walker = sr->routing_table;
+    while(rt_walker)
+    {
+        if(strcpy(inet_ntoa(dst), inet_ntoa(rt_walker->dest)) == 0) {
+            return rt_walker;
+        }
+        rt_walker = rt_walker->next;
+    }
+    return NULL;
+}
+
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr) {
-    Debug("route not implemented\n");
+
+    const uint8_t * destmac = getarp(inet_ntoa(ip_hdr->ip_dst));
+    struct sr_rt * rt_entry = get_rt_entry(sr, ip_hdr->ip_dst);
+    if(destmac != NULL && rt_entry != NULL) {
+        memcpy(e_hdr->ether_dhost, destmac, 6);
+        memcpy(e_hdr->ether_shost, sr->if_list->addr, 6);
+        sr_send_packet(sr, packet, len, rt_entry->interface);
+        Debug("Routing to ");
+        DebugMAC(destmac);
+        Debug("\n");
+    } else {
+        // send arp request
+        // queue packet until arp reply
+        Debug("unknown ip, can not route\n");
+    }
 }
