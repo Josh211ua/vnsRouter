@@ -204,14 +204,17 @@ void prettyprintIP(uint32_t ipaddr){
 
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
 
+    // Find hardward address corresponding to interface
+    unsigned char* macaddr = (sr_get_interface(sr, interface))->addr;
+
     // Allocate a packet for the buffer
     unsigned int len = sizeof(struct sr_ethernet_hdr)+ sizeof(struct sr_arphdr);
     uint8_t buf[len];
 
     // Insert ethernet header
     struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
-    memcpy(newe_hdr->ether_dhost,ehdr->ether_shost,6);
-    memcpy(newe_hdr->ether_shost,sr->if_list->addr,6);
+    memcpy(newe_hdr->ether_dhost, ehdr->ether_shost,6);
+    memcpy(newe_hdr->ether_shost, macaddr,6);
     newe_hdr->ether_type = htons(ETHERTYPE_ARP);
 
     // Insert arp header
@@ -222,7 +225,7 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
     newa_hdr->ar_hln = arph->ar_hln;
     newa_hdr->ar_pln = arph->ar_pln;
     newa_hdr->ar_op = htons(ARP_REPLY);
-    memcpy(newa_hdr->ar_sha,sr->if_list->addr,6);
+    memcpy(newa_hdr->ar_sha, macaddr,6);
     newa_hdr->ar_sip = arph->ar_tip;
     newa_hdr->ar_tip = arph->ar_sip;
     // newa_hdr->ar_tha = arph->ar_sha;
