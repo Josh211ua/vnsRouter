@@ -27,6 +27,7 @@
 #define sr_IFACE_NAMELEN 32
 
 struct waitingpacket {
+    uint32_t ip_dst;
     uint8_t* data;
     unsigned int len;
     struct waitingpacket* next;
