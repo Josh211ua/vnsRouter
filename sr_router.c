@@ -20,7 +20,6 @@
 #include "sr_if.h"
 #include "sr_rt.h"
 #include "sr_router.h"
-#include "sr_protocol.h"
 #include "sr_icmp_proto.h"
 #include "sr_checksum.h"
 #include "sr_arpcache.h"
@@ -29,7 +28,10 @@ void prettyprintIP(uint32_t ipaddr);
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
         unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
         struct ip* ip_hdr, struct icmp_hdr* icmp_hdr);
-void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr, char*);
+void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, 
+        struct sr_instance* sr, char*);
+void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, 
+        struct in_addr dst_ip, char *interface);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
@@ -39,6 +41,8 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
         struct sr_ethernet_hdr* e_hdr, struct ip*);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
+
+const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -117,6 +121,7 @@ void sr_handlepacket(struct sr_instance* sr,
         } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
             // Arp reply: add to cache, send all the packets in the queue
             Debug("ARP reply is not implemented");
+            //handleArpReply(e_hdr, a_hdr, sr, interface);
         } else {
             Debug("ARP packet received with bad op code.");
         }
@@ -245,6 +250,44 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
     //                      const char* iface /* borrowed */)
     sr_send_packet(sr, buf,len, interface);
     printf("said yes!\n");
+
+}
+
+void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, struct in_addr dst_ip, char *interface) {
+    // Find hardward address corresponding to interface
+    unsigned char* macaddr = (sr_get_interface(sr, interface))->addr;
+
+    // Allocate a packet for the buffer
+    unsigned int len = sizeof(struct sr_ethernet_hdr)+ sizeof(struct sr_arphdr);
+    uint8_t buf[len];
+
+    // Insert ethernet header
+    struct sr_ethernet_hdr *newe_hdr = (struct sr_ethernet_hdr*) buf;
+    memcpy(newe_hdr->ether_dhost, BROADCAST_ADDR,6);
+    memcpy(newe_hdr->ether_shost, macaddr,6);
+    newe_hdr->ether_type = htons(ETHERTYPE_ARP);
+
+    // Insert arp header
+    struct sr_arphdr *newa_hdr = (struct sr_arphdr*) (buf + sizeof(struct sr_ethernet_hdr));
+
+    newa_hdr->ar_hrd = htons(1);
+    newa_hdr->ar_pro = htons(0x0800);
+    newa_hdr->ar_hln = 0x06;
+    newa_hdr->ar_pln = 0x04;
+    newa_hdr->ar_op = htons(ARP_REQUEST);
+    memcpy(newa_hdr->ar_sha, macaddr,6);
+    newa_hdr->ar_sip = (src_ip);
+    memcpy(newa_hdr->ar_tha, BROADCAST_ADDR,6);
+    newa_hdr->ar_tip = (*((uint32_t*)(&dst_ip)));
+
+    Debug("\nPacket to send:\n");
+    Debug("Ethernet Header:\n");
+    printEthernetHeader(newe_hdr);
+    printf("Arp Header:\n");
+    printArpHeader(newa_hdr);
+
+    sr_send_packet(sr, buf,len, interface);
+    printf("Sent ARP Request\n");
 
 }
 
@@ -421,31 +464,38 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
 
 struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
     struct sr_rt* rt_walker = sr->routing_table;
+    struct sr_rt* default_rt = NULL;
     while(rt_walker)
     {
-        if(strcpy(inet_ntoa(dst), inet_ntoa(rt_walker->dest)) == 0) {
+        if(strcmp(inet_ntoa(dst), inet_ntoa(rt_walker->dest)) == 0) {
             return rt_walker;
+        }
+        if(strcmp(inet_ntoa(rt_walker->dest), "0.0.0.0")) {
+            default_rt = rt_walker;
         }
         rt_walker = rt_walker->next;
     }
-    return NULL;
+    return default_rt;
 }
 
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr) {
 
-    const uint8_t * destmac = getarp(inet_ntoa(ip_hdr->ip_dst));
+    //const uint8_t * destmac = getarp(inet_ntoa(ip_hdr->ip_dst));
     struct sr_rt * rt_entry = get_rt_entry(sr, ip_hdr->ip_dst);
-    if(destmac != NULL && rt_entry != NULL) {
-        memcpy(e_hdr->ether_dhost, destmac, 6);
-        memcpy(e_hdr->ether_shost, sr->if_list->addr, 6);
-        sr_send_packet(sr, packet, len, rt_entry->interface);
-        Debug("Routing to ");
-        DebugMAC(destmac);
-        Debug("\n");
+    if(rt_entry != NULL) {
+        struct sr_if *inter = sr_get_interface(sr, rt_entry->interface);
+        // Create a new packet to queue
+        struct waitingpacket *newpacket = malloc(sizeof(struct waitingpacket));
+        newpacket->data = packet;
+        newpacket->len = len;
+        newpacket->next = inter->queue;
+        // Queue new packet
+        inter->queue = newpacket;
+
+        // send arp request over interface
+        sendArpRequest(sr, inter->ip, rt_entry->gw, inter->name);
     } else {
-        // send arp request
-        // queue packet until arp reply
-        Debug("unknown ip, can not route\n");
+        Debug("Failed to grab default routing table entry in get_rt_entry.\n");
     }
 }
