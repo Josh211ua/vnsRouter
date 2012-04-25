@@ -299,7 +299,7 @@ void sendQueue(uint32_t ip, unsigned char * ha,
         struct sr_instance *sr, char *interface) {
     struct sr_if *inter = sr_get_interface(sr, interface);
 
-    struct waitingpacket *next = NULL;
+    struct waitingpacket *last = NULL;
     struct waitingpacket *me = inter->queue;
 
     while( me != NULL ) {
@@ -308,8 +308,12 @@ void sendQueue(uint32_t ip, unsigned char * ha,
         if( me->ip_dst == ip ) {
             sendOff(sr, me, inter, ha);
         } else {
-            me->next = next;
-            next = me;
+            if(last == NULL) {
+                inter->queue = me;
+            } else {
+                last->next = me;
+            }
+            last = me;
         }
         me = me->next;
     }
