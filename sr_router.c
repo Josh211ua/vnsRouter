@@ -32,6 +32,8 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph,
         struct sr_instance* sr, char*);
 void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, 
         struct in_addr dst_ip, char *interface);
+void sendQueue(uint32_t ip, unsigned char * ha, 
+        struct sr_instance *sr, char *interface);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
 void printIpHeader(struct ip* iphdr);
@@ -121,7 +123,8 @@ void sr_handlepacket(struct sr_instance* sr,
         } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
             // Arp reply: add to cache, send all the packets in the queue
             Debug("ARP reply is not implemented");
-            //handleArpReply(e_hdr, a_hdr, sr, interface);
+            // TODO: Add to Cache
+            sendQueue(a_hdr->ar_sip, a_hdr->ar_sha, sr, interface);
         } else {
             Debug("ARP packet received with bad op code.");
         }
@@ -289,6 +292,10 @@ void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, struct in_addr dst_
     sr_send_packet(sr, buf,len, interface);
     printf("Sent ARP Request\n");
 
+}
+
+void sendQueue(uint32_t ip, unsigned char * ha, 
+        struct sr_instance *sr, char *interface) {
 }
 
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
