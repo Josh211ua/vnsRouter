@@ -317,8 +317,6 @@ void sendQueue(uint32_t ip, unsigned char * ha,
         }
         me = me->next;
     }
-
-    inter->queue = next;
 }
 
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
