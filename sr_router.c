@@ -43,6 +43,8 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
         struct sr_ethernet_hdr* e_hdr, struct ip*);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
+void sendOff(struct sr_instance *sr, struct waitingpacket *pack, 
+        struct sr_if *inter, const uint8_t *ha);
 
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 /*---------------------------------------------------------------------
@@ -60,12 +62,12 @@ void sr_init(struct sr_instance* sr)
 
     /* Add initialization code here! */
     init_arpcache();
-    Debug("Mac for 171.67.242.68 is ");
-    DebugMAC(getarp("171.67.242.68"));
-    Debug("\n");
-    Debug("Mac for 171.67.242.70 is ");
-    DebugMAC(getarp("171.67.242.70"));
-    Debug("\n");
+//    Debug("Mac for 171.67.242.68 is ");
+//    DebugMAC(getarp("171.67.242.68"));
+//    Debug("\n");
+//    Debug("Mac for 171.67.242.70 is ");
+//    DebugMAC(getarp("171.67.242.70"));
+//    Debug("\n");
 
 } /* -- sr_init -- */
 
@@ -119,10 +121,11 @@ void sr_handlepacket(struct sr_instance* sr,
         if(a_hdr->ar_op == ntohs(ARP_REQUEST)) {
             // Arp request: reply based on which interface it came in on
             // TODO: Add to Cache
+            addarp(a_hdr->ar_sip, a_hdr->ar_sha);
             sendArpReply(e_hdr,a_hdr,sr,interface);
         } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
             // Arp reply: add to cache, send all the packets in the queue
-            // TODO: Add to Cache
+            addarp(a_hdr->ar_sip, a_hdr->ar_sha);
             sendQueue(a_hdr->ar_sip, a_hdr->ar_sha, sr, interface);
         } else {
             Debug("ARP packet received with bad op code.");
@@ -303,11 +306,7 @@ void sendQueue(uint32_t ip, unsigned char * ha,
         //Debug("Looking for Ip address: %s\n", prettyprintIPHelper(ip));
         //Debug("Found Ip address: %s\n", prettyprintIPHelper(me->ip_dst));
         if( me->ip_dst == ip ) {
-            struct sr_ethernet_hdr *e_hdr = (struct sr_ethernet_hdr*) me->data;
-            memcpy(e_hdr->ether_shost, (uint8_t*) inter->addr, ETHER_ADDR_LEN);
-            memcpy(e_hdr->ether_dhost, (uint8_t*) ha, ETHER_ADDR_LEN);
-            sr_send_packet(sr, me->data, me->len, interface);
-            Debug("Routed packet to %s\n", prettyprintIPHelper(ip));
+            sendOff(sr, me, inter, ha);
         } else {
             me->next = next;
             next = me;
@@ -527,12 +526,27 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         memcpy(newpacket->data, packet, len);
         newpacket->len = len;
         newpacket->next = inter->queue;
-        // Queue new packet
-        inter->queue = newpacket;
 
-        // send arp request over interface
-        sendArpRequest(sr, inter->ip, rt_entry->gw, inter->name);
+        const uint8_t *ha = getarp(newpacket->ip_dst);
+        if(ha != NULL) {
+            sendOff(sr, newpacket, inter, ha);
+        } else {
+            // Queue new packet
+            inter->queue = newpacket;
+
+            // send arp request over interface
+            sendArpRequest(sr, inter->ip, rt_entry->gw, inter->name);
+        }
     } else {
         Debug("Failed to grab default routing table entry in get_rt_entry.\n");
     }
+}
+
+void sendOff(struct sr_instance *sr, struct waitingpacket *pack, 
+        struct sr_if *inter, const uint8_t *ha) {
+    struct sr_ethernet_hdr *e_hdr = (struct sr_ethernet_hdr*) pack->data;
+    memcpy(e_hdr->ether_shost, (uint8_t*) inter->addr, ETHER_ADDR_LEN);
+    memcpy(e_hdr->ether_dhost, ha, ETHER_ADDR_LEN);
+    sr_send_packet(sr, pack->data, pack->len, inter->name);
+    Debug("Routed packet to %s\n", prettyprintIPHelper(pack->ip_dst));
 }

@@ -3,9 +3,9 @@
 
 void init_arpcache(void);
 
-void addarp(char ip[15], uint8_t mac[6]);
+void addarp(uint32_t ip, uint8_t mac[6]);
 
-const uint8_t * getarp(char ip[15]);
+const uint8_t * getarp(uint32_t ip);
 
 void delete_arpcache(void);
 
