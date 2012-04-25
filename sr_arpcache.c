@@ -1,12 +1,15 @@
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
+
+#define ARP_TIMEOUT 20
 
 struct arppair {
     uint32_t ip;
     uint8_t mac[ETHER_ADDR_LEN];
-    //time_t expire;
+    time_t created;
     struct arppair *next;
 };
 
@@ -22,21 +25,46 @@ void init_arpcache(void) {
 }
 
 void addarp(uint32_t ip, uint8_t mac[6]) {
+    time_t now = time(NULL);
     struct arppair *newarp = malloc(sizeof(struct arppair));
     newarp->ip = ip;
     memcpy(newarp->mac, mac, 6);
+    newarp->created = now;
     newarp->next = cache;
     cache = newarp;
 }
 
+void removeOldEntries() {
+    time_t now = time(NULL);
+    struct arppair *me = cache;
+    struct arppair *last = NULL;
+    while(me != NULL) {
+        // If not expired
+        if(difftime(now, me->created) < ARP_TIMEOUT) {
+            // Keep Entry
+            if(last == NULL) {
+                cache = me;
+            } else {
+                last->next = me;
+            }
+            last = me;
+        }
+        me = me->next;
+    }
+}
+
 const uint8_t * getarp(uint32_t ip) {
+    removeOldEntries();
+
     struct arppair *arpptr = cache;
+
     while(arpptr != NULL) {
         if(memcmp(&(arpptr->ip), &ip, sizeof(uint32_t)) == 0) {
-            return arpptr->mac;
+                return arpptr->mac;
         }
         arpptr = arpptr->next;
     }
+
     return NULL;
 } 
 
