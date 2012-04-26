@@ -295,6 +295,11 @@ void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, struct in_addr dst_
 
 }
 
+void delete_waiting(struct waitingpacket* doomed){
+    free(doomed->data);
+    free(doomed);
+}
+
 void sendQueue(uint32_t ip, unsigned char * ha,
         struct sr_instance *sr, char *interface) {
     struct sr_if *inter = sr_get_interface(sr, interface);
@@ -312,10 +317,13 @@ void sendQueue(uint32_t ip, unsigned char * ha,
             } else {
                 last->next = me->next;
             }
+            struct waitingpacket *temp = me;
+            me = temp->next;
+            delete_waiting(temp);
         } else {
             last = me;
+            me = me->next;
         }
-        me = me->next;
     }
 }
 
@@ -532,6 +540,7 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         const uint8_t *ha = getarp(newpacket->ip_dst);
         if(ha != NULL) {
             sendOff(sr, newpacket, inter, ha);
+            delete_waiting(newpacket);
         } else {
             // Queue new packet
             inter->queue = newpacket;
@@ -550,5 +559,9 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
     memcpy(e_hdr->ether_shost, (uint8_t*) inter->addr, ETHER_ADDR_LEN);
     memcpy(e_hdr->ether_dhost, ha, ETHER_ADDR_LEN);
     sr_send_packet(sr, pack->data, pack->len, inter->name);
-    Debug("Routed packet to %s\n", prettyprintIPHelper(pack->ip_dst));
+
+    char * prettyIP = prettyprintIPHelper(pack->ip_dst);
+    Debug("Routed packet to %s\n", prettyIP);
+    free(prettyIP);
+
 }
