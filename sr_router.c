@@ -28,11 +28,11 @@ void prettyprintIP(uint32_t ipaddr);
 void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
         unsigned int len, char* interface, struct sr_ethernet_hdr* e_hdr,
         struct ip* ip_hdr, struct icmp_hdr* icmp_hdr);
-void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, 
+void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph,
         struct sr_instance* sr, char*);
-void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, 
+void sendArpRequest(struct sr_instance* sr, uint32_t src_ip,
         struct in_addr dst_ip, char *interface);
-void sendQueue(uint32_t ip, unsigned char * ha, 
+void sendQueue(uint32_t ip, unsigned char * ha,
         struct sr_instance *sr, char *interface);
 void printEthernetHeader(struct sr_ethernet_hdr* ehdr);
 void printArpHeader(struct sr_arphdr* ahdr);
@@ -43,7 +43,7 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
         struct sr_ethernet_hdr* e_hdr, struct ip*);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
-void sendOff(struct sr_instance *sr, struct waitingpacket *pack, 
+void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
         struct sr_if *inter, const uint8_t *ha);
 
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -295,7 +295,7 @@ void sendArpRequest(struct sr_instance* sr, uint32_t src_ip, struct in_addr dst_
 
 }
 
-void sendQueue(uint32_t ip, unsigned char * ha, 
+void sendQueue(uint32_t ip, unsigned char * ha,
         struct sr_instance *sr, char *interface) {
     struct sr_if *inter = sr_get_interface(sr, interface);
 
@@ -307,12 +307,12 @@ void sendQueue(uint32_t ip, unsigned char * ha,
         //Debug("Found Ip address: %s\n", prettyprintIPHelper(me->ip_dst));
         if( me->ip_dst == ip ) {
             sendOff(sr, me, inter, ha);
-        } else {
-            if(last == NULL) {
-                inter->queue = me;
+            if(last == NULL){
+                inter->queue = me->next;
             } else {
-                last->next = me;
+                last->next = me->next;
             }
+        } else {
             last = me;
         }
         me = me->next;
@@ -495,7 +495,7 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
 struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
     struct sr_rt* rt_walker = sr->routing_table;
     struct sr_rt* default_rt = NULL;
-    
+
     char dest[15];
     strncpy(dest, inet_ntoa(dst), 15);
     //Debug("Searching routing table for %s\n", dest);
@@ -544,7 +544,7 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
     }
 }
 
-void sendOff(struct sr_instance *sr, struct waitingpacket *pack, 
+void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
         struct sr_if *inter, const uint8_t *ha) {
     struct sr_ethernet_hdr *e_hdr = (struct sr_ethernet_hdr*) pack->data;
     memcpy(e_hdr->ether_shost, (uint8_t*) inter->addr, ETHER_ADDR_LEN);
