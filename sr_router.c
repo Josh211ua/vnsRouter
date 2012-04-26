@@ -381,11 +381,15 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
     // TODO: This is wrong because we have multiple interfaces and thus multiple ips
-    Debug("TODO fix implementation of iAmDestination\n");
-    char* fromsr = prettyprintIPHelper(sr->if_list->ip);
+    struct sr_if* curr = sr->if_list;
+    bool answer = false;
     char * frompacket =inet_ntoa(*ip_dest);
-    bool answer = (strncmp(fromsr, frompacket, 15) == 0);
-    free(fromsr);
+    while(curr != NULL){
+        char* fromsr = prettyprintIPHelper(curr->ip);
+        answer = answer || (strncmp(fromsr, frompacket, 15) == 0);
+        free(fromsr);
+        curr = curr->next;
+    }
     return answer;
 }
 
