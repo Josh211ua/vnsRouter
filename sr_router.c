@@ -380,7 +380,6 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
 }
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
-    // TODO: This is wrong because we have multiple interfaces and thus multiple ips
     struct sr_if* curr = sr->if_list;
     bool answer = false;
     char * frompacket =inet_ntoa(*ip_dest);
