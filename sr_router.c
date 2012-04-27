@@ -120,7 +120,6 @@ void sr_handlepacket(struct sr_instance* sr,
 
         if(a_hdr->ar_op == ntohs(ARP_REQUEST)) {
             // Arp request: reply based on which interface it came in on
-            // TODO: Add to Cache
             addarp(a_hdr->ar_sip, a_hdr->ar_sha);
             sendArpReply(e_hdr,a_hdr,sr,interface);
         } else if(a_hdr->ar_op == ntohs(ARP_REPLY)) {
@@ -133,6 +132,13 @@ void sr_handlepacket(struct sr_instance* sr,
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
         // IP
+        
+        if(sr->firewall_enabled) {
+            if(strncmp(sr->external, interface, sr_IFACE_NAMELEN) == 0) {
+                Debug("Dropped packet into interface %s\n", interface);
+                return;
+            }
+        }
 
         struct ip* ip_hdr = 0;
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));

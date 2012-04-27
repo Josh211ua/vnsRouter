@@ -60,6 +60,7 @@ struct sr_instance
 
 /* -- sr_main.c -- */
 int sr_verify_routing_table(struct sr_instance* sr);
+int sr_verify_external(struct sr_instance* sr);
 
 /* -- sr_vns_comm.c -- */
 int sr_send_packet(struct sr_instance* , uint8_t* , unsigned int , const char*);

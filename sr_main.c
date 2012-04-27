@@ -48,7 +48,6 @@ extern char* optarg;
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
-bool validate_external(char* external, struct sr_if *if_list);
 static void sr_init_instance(struct sr_instance* );
 static void sr_destroy_instance(struct sr_instance* );
 static void sr_set_user(struct sr_instance* );
@@ -165,17 +164,16 @@ int main(int argc, char **argv)
         sr_load_rt_wrap(&sr, "rtable.vrhost");
     }
 
+    /* call router init (for arp subsystem etc.) */
+    sr_init(&sr);
+
     if(external != NULL) {
         sr.firewall_enabled = true;
-        if(validate_external(external, sr.if_list)) {
-            strncpy(sr.external, external, sr_IFACE_NAMELEN);
-        }
+        strncpy(sr.external, external, sr_IFACE_NAMELEN);
+        Debug("Set external interface to %s.\n", external);
     } else {
         sr.firewall_enabled = false;
     }
-
-    /* call router init (for arp subsystem etc.) */
-    sr_init(&sr);
 
     /* -- whizbang main loop ;-) */
     while( sr_read_from_server(&sr) == 1);
@@ -201,16 +199,19 @@ static void usage(char* argv0)
             DEFAULT_SERVER, DEFAULT_PORT, DEFAULT_HOST );
 } /* -- usage -- */
 
-bool validate_external(char* external, struct sr_if *if_list) {
-    struct sr_if *ifwalker = if_list;
-    while(ifwalker != NULL) {
-        if (strncmp(external, ifwalker->name, sr_IFACE_NAMELEN) == 0){
-            return true;
+int sr_verify_external(struct sr_instance *sr) {
+    if(sr->firewall_enabled) {
+        struct sr_if *ifwalker = sr->if_list;
+        while(ifwalker != NULL) {
+            if (strncmp(sr->external, ifwalker->name, sr_IFACE_NAMELEN) == 0){
+                return 0;
+            }
+            ifwalker = ifwalker->next;
         }
+        return 1;
+    } else {
+        return 0;
     }
-    Debug("ERROR: external interface specified by -e option does not exist. Please specify interfance by it's name (e.g. eth0).\n");
-    exit(1);
-    return false;
 }
 
 /*-----------------------------------------------------------------------------

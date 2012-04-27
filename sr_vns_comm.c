@@ -462,6 +462,11 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
                 fprintf(stderr,"Routing table not consistent with hardware\n");
                 return -1;
             }
+            if(sr_verify_external(sr) != 0)
+            {
+                fprintf(stderr, "External interface is not consistent with hardware interface names\n");
+                return -1;
+            }
             printf(" <-- Ready to process packets --> \n");
             break;
 
