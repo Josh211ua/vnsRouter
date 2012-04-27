@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "sr_protocol.h"
 #include "sr_if.h"
@@ -53,6 +54,7 @@ struct sr_instance
     struct sr_if* if_list; /* list of interfaces */
     struct sr_rt* routing_table; /* routing table */
     FILE* logfile;
+    bool firewall_enabled;
     char external[sr_IFACE_NAMELEN]; /* external inteface */
 };
 

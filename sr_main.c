@@ -165,8 +165,13 @@ int main(int argc, char **argv)
         sr_load_rt_wrap(&sr, "rtable.vrhost");
     }
 
-    if(validate_external(external, sr.if_list)) {
-        strncpy(sr.external, external, sr_IFACE_NAMELEN);
+    if(external != NULL) {
+        sr.firewall_enabled = true;
+        if(validate_external(external, sr.if_list)) {
+            strncpy(sr.external, external, sr_IFACE_NAMELEN);
+        }
+    } else {
+        sr.firewall_enabled = false;
     }
 
     /* call router init (for arp subsystem etc.) */
@@ -203,6 +208,8 @@ bool validate_external(char* external, struct sr_if *if_list) {
             return true;
         }
     }
+    Debug("ERROR: external interface specified by -e option does not exist. Please specify interfance by it's name (e.g. eth0).\n");
+    exit(1);
     return false;
 }
 
