@@ -69,6 +69,7 @@ void sr_init(struct sr_instance* sr)
 
     /* Add initialization code here! */
     init_arpcache();
+    sr->flowTable = NULL;
 //    Debug("Mac for 171.67.242.68 is ");
 //    DebugMAC(getarp("171.67.242.68"));
 //    Debug("\n");
@@ -595,6 +596,7 @@ bool compareIPandPort(char * Ip1, char * Ip2, uint16_t port1, uint16_t port2){
 }
 
 void deleteFTE(struct flowTableEntry* doomed){
+    Debug("Deleted flow for %s to %s\n", doomed->srcIP, doomed->dstIP);
     free(doomed);
 }
 
@@ -603,7 +605,8 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
     while(current != NULL){
-        if(difftime(time(NULL),current->ttl) < DEATH){
+        Debug("Difference in times: %f\n", difftime(time(NULL), current->ttl));
+        if(difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
             }
@@ -634,6 +637,7 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
     struct flowTableEntry* result = searchForFlow(sr, srcIp, srcPort, dstIp, dstPort, protocol);
     if(result == NULL){
+        Debug("Adding flow for %s to %s\n", srcIp, dstIp);
         result = malloc(sizeof(struct flowTableEntry));
         strncpy(result->srcIP,srcIp,15);
         result->srcPort = srcPort;
@@ -641,8 +645,11 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         result->dstPort = dstPort;
         result->ipProtocol = protocol;
         result->ttl = time(NULL);
+        result->next = sr->flowTable;
+        sr->flowTable = result;
     }
     else {
+        Debug("Updating TTL for %s to %s\n", srcIp, dstIp);
         result->ttl = time(NULL);
     }
 }
