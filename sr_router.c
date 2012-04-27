@@ -50,6 +50,7 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
 void addFlowToTable(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
+char* prettyprintIPHelper(uint32_t ipaddr);
 
 const double DEATH = 5;
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -138,20 +139,28 @@ void sr_handlepacket(struct sr_instance* sr,
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
         // IP
-
-        if(sr->firewall_enabled) {
-            if(strncmp(sr->external, interface, sr_IFACE_NAMELEN) == 0) {
-                Debug("Dropped packet into interface %s\n", interface);
-                return;
-            }
-        }
-
         struct ip* ip_hdr = 0;
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
-
         Debug("\nPacket was an IP:\n");
-        //Debug("IP Header:\n");
-        //printIpHeader(ip_hdr);
+
+        if(sr->firewall_enabled) {
+            char* t1 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_src);
+            char* t2 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_dst);
+            if(strncmp(sr->external, interface, sr_IFACE_NAMELEN) == 0) {
+                struct flowTableEntry* result = searchForFlow(sr,
+                    t1,0, t2,0,ip_hdr->ip_p);
+                if(result == NULL){
+                    Debug("Dropped packet into interface %s\n", interface);
+                    free(t1);
+                    free(t2);
+                    return;
+                }
+                Debug("Let a packet through the firewall");
+            }
+            addFlowToTable(sr,t1,0, t2,0,ip_hdr->ip_p);
+            free(t1);
+            free(t2);
+        }
 
         // ICMP
         if(ip_hdr->ip_p == 1) {
@@ -582,7 +591,7 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
 }
 
 bool compareIPandPort(char * Ip1, char * Ip2, uint16_t port1, uint16_t port2){
-    return true;
+    return((strncmp(Ip1, Ip2, 15) == 0)&&(port1 == port2));
 }
 
 void deleteFTE(struct flowTableEntry* doomed){
