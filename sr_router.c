@@ -605,7 +605,6 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
     while(current != NULL){
-        Debug("Difference in times: %f\n", difftime(time(NULL), current->ttl));
         if(difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
@@ -649,7 +648,6 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         sr->flowTable = result;
     }
     else {
-        Debug("Updating TTL for %s to %s\n", srcIp, dstIp);
         result->ttl = time(NULL);
     }
 }
