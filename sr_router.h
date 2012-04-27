@@ -36,9 +36,9 @@ struct sr_if;
 struct sr_rt;
 
 struct flowTableEntry {
-    char* srcIP;
+    char srcIP[15];
     uint16_t srcPort;
-    char* dstIP;
+    char dstIP[15];
     uint16_t dstPort;
     uint8_t ipProtocol;
     bool isImmortal;

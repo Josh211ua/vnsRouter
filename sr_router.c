@@ -49,8 +49,9 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
 struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
 void addFlowToTable(struct sr_instance* sr, char * srcIp,
-        uint16_t srcPort, char * dstIP, uint16_t dstPort);
+        uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
 
+const double DEATH = 5;
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -593,7 +594,7 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
     while(current != NULL){
-        if(difftime(current->ttl,time(NULL)) < 0){
+        if(difftime(time(NULL),current->ttl) < DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
             }
@@ -621,6 +622,18 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     return NULL;
 }
 void addFlowToTable(struct sr_instance* sr, char * srcIp,
-        uint16_t srcPort, char * dstIP, uint16_t dstPort){
-    return;
+        uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
+    struct flowTableEntry* result = searchForFlow(sr, srcIp, srcPort, dstIp, dstPort, protocol);
+    if(result == NULL){
+        result = malloc(sizeof(struct flowTableEntry));
+        strncpy(result->srcIP,srcIp,15);
+        result->srcPort = srcPort;
+        strncpy(result->dstIP,dstIp,15);
+        result->dstPort = dstPort;
+        result->ipProtocol = protocol;
+        result->ttl = time(NULL);
+    }
+    else {
+        result->ttl = time(NULL);
+    }
 }
