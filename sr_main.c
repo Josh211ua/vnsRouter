@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
@@ -47,6 +48,7 @@ extern char* optarg;
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
+bool validate_external(char* external, struct sr_if *if_list);
 static void sr_init_instance(struct sr_instance* );
 static void sr_destroy_instance(struct sr_instance* );
 static void sr_set_user(struct sr_instance* );
@@ -66,12 +68,13 @@ int main(int argc, char **argv)
     char *template = NULL;
     unsigned int port = DEFAULT_PORT;
     unsigned int topo = DEFAULT_TOPO;
+    char *external = NULL;
     char *logfile = 0;
     struct sr_instance sr;
 
     printf("Using %s\n", VERSION_INFO);
 
-    while ((c = getopt(argc, argv, "ha:s:v:p:u:t:r:l:T:")) != EOF)
+    while ((c = getopt(argc, argv, "ha:s:v:p:u:t:r:l:T:e:")) != EOF)
     {
         switch (c)
         {
@@ -105,6 +108,9 @@ int main(int argc, char **argv)
                 break;
             case 'T':
                 template = optarg;
+                break;
+            case 'e':
+                external = optarg;
                 break;
         } /* switch */
     } /* -- while -- */
@@ -159,6 +165,10 @@ int main(int argc, char **argv)
         sr_load_rt_wrap(&sr, "rtable.vrhost");
     }
 
+    if(validate_external(external, sr.if_list)) {
+        strncpy(sr.external, external, sr_IFACE_NAMELEN);
+    }
+
     /* call router init (for arp subsystem etc.) */
     sr_init(&sr);
 
@@ -181,10 +191,20 @@ static void usage(char* argv0)
     printf("Format: %s [-h] [-v host] [-s server] [-p port] \n",argv0);
     printf("           [-T template_name] [-u username] [-a auth_key_filename]\n");
     printf("           [-t topo id] [-r routing table] \n");
-    printf("           [-l log file] \n");
+    printf("           [-l log file] [-e external interface]\n");
     printf("   defaults server=%s port=%d host=%s  \n",
             DEFAULT_SERVER, DEFAULT_PORT, DEFAULT_HOST );
 } /* -- usage -- */
+
+bool validate_external(char* external, struct sr_if *if_list) {
+    struct sr_if *ifwalker = if_list;
+    while(ifwalker != NULL) {
+        if (strncmp(external, ifwalker->name, sr_IFACE_NAMELEN) == 0){
+            return true;
+        }
+    }
+    return false;
+}
 
 /*-----------------------------------------------------------------------------
  * Method: sr_set_user(..)

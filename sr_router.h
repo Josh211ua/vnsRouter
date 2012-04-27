@@ -14,6 +14,7 @@
 #include <stdio.h>
 
 #include "sr_protocol.h"
+#include "sr_if.h"
 
 /* we dont like this debug , but what to do for varargs ? */
 #ifdef _DEBUG_
@@ -52,6 +53,7 @@ struct sr_instance
     struct sr_if* if_list; /* list of interfaces */
     struct sr_rt* routing_table; /* routing table */
     FILE* logfile;
+    char external[sr_IFACE_NAMELEN]; /* external inteface */
 };
 
 /* -- sr_main.c -- */
