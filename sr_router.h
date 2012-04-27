@@ -35,6 +35,17 @@
 struct sr_if;
 struct sr_rt;
 
+struct flowTableEntry {
+    char* srcIP;
+    uint16_t srcPort;
+    char* dstIP;
+    uint16_t dstPort;
+    uint8_t ipProtocol;
+    bool isImmortal;
+    time_t ttl;
+    struct flowTableEntry* next;
+};
+
 /* ----------------------------------------------------------------------------
  * struct sr_instance
  *
@@ -56,6 +67,7 @@ struct sr_instance
     FILE* logfile;
     bool firewall_enabled;
     char external[sr_IFACE_NAMELEN]; /* external inteface */
+    struct flowTableEntry* flowTable;
 };
 
 /* -- sr_main.c -- */

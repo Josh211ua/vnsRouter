@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -45,6 +46,10 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
 void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
         struct sr_if *inter, const uint8_t *ha);
+struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
+        uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
+void addFlowToTable(struct sr_instance* sr, char * srcIp,
+        uint16_t srcPort, char * dstIP, uint16_t dstPort);
 
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 /*---------------------------------------------------------------------
@@ -132,7 +137,7 @@ void sr_handlepacket(struct sr_instance* sr,
     }
     else if (e_hdr->ether_type == htons(ETHERTYPE_IP)) {
         // IP
-        
+
         if(sr->firewall_enabled) {
             if(strncmp(sr->external, interface, sr_IFACE_NAMELEN) == 0) {
                 Debug("Dropped packet into interface %s\n", interface);
@@ -573,4 +578,49 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
     Debug("Routed packet to %s\n", prettyIP);
     free(prettyIP);
 
+}
+
+bool compareIPandPort(char * Ip1, char * Ip2, uint16_t port1, uint16_t port2){
+    return true;
+}
+
+void deleteFTE(struct flowTableEntry* doomed){
+    free(doomed);
+}
+
+struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
+        uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
+    struct flowTableEntry* current = sr->flowTable;
+    struct flowTableEntry* prev = NULL;
+    while(current != NULL){
+        if(difftime(current->ttl,time(NULL)) < 0){
+            if(prev == NULL){
+                sr->flowTable = current->next;
+            }
+            else {
+                prev->next = current->next;
+            }
+            struct flowTableEntry* temp = current;
+            current = current->next;
+            deleteFTE(temp);
+        }
+        else if(((compareIPandPort(current->srcIP, srcIp,current->srcPort,srcPort) &&
+            compareIPandPort(current->dstIP, dstIp,current->srcPort,dstPort))
+                ||
+            (compareIPandPort(current->srcIP, dstIp,current->srcPort,dstPort)&&
+            compareIPandPort(current->dstIP, srcIp,current->srcPort,srcPort)))
+            &&
+            (protocol == current->ipProtocol)){
+            return current;
+        }
+        else {
+            prev = current;
+            current = current->next;
+        }
+    }
+    return NULL;
+}
+void addFlowToTable(struct sr_instance* sr, char * srcIp,
+        uint16_t srcPort, char * dstIP, uint16_t dstPort){
+    return;
 }
