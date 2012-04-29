@@ -30,6 +30,8 @@ struct waitingpacket {
     uint32_t ip_dst;
     uint8_t* data;
     unsigned int len;
+    time_t arpt;
+    uint8_t arpn;
     struct waitingpacket* next;
 };
 

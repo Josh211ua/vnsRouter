@@ -574,6 +574,8 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         newpacket->data = calloc(sizeof(uint8_t), len);
         memcpy(newpacket->data, packet, len);
         newpacket->len = len;
+        newpacket->arpt = time(NULL);
+        newpacket->arpn = 0;
         newpacket->next = inter->queue;
 
         const uint8_t *ha = getarp(newpacket->ip_dst);
