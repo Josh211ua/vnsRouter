@@ -106,12 +106,15 @@ void sr_handlepacket(struct sr_instance* sr,
         char* interface/* lent */)
 {
     /* REQUIRES */
+    Debug("1");
     assert(sr);
     assert(packet);
     assert(interface);
 
+    Debug("2");
     resendAllArps(sr);
 
+    Debug("3");
     //figure out what kind of packet we got
     struct sr_ethernet_hdr* e_hdr = 0;
     e_hdr = (struct sr_ethernet_hdr*)packet;
@@ -177,14 +180,15 @@ void sr_handlepacket(struct sr_instance* sr,
             //printIcmpHeader(icmp_h);
 
             // Case on ICMP Type:
-            if (icmp_h->icmp_type == 30 && icmp_h->icmp_code == 0) {
-                // Traceroute:
-                Debug("Reply to Traceroute not implemented");
-                if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
-                    Debug("Decrement TTD not implemented (Don't forget to recalculate checksum)");
-                    route(sr, packet, len, interface, e_hdr, ip_hdr);
-                }
-            } else if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
+            //if (icmp_h->icmp_type == 30 && icmp_h->icmp_code == 0) {
+            //    // Traceroute:
+            //    Debug("Reply to Traceroute not implemented");
+            //    if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
+            //        Debug("Decrement TTD not implemented (Don't forget to recalculate checksum)");
+            //        route(sr, packet, len, interface, e_hdr, ip_hdr);
+            //    }
+            //} else 
+            if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
                 // Echo Request:
                 if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
                     respondToIcmpEcho(sr, packet, len, interface, e_hdr, ip_hdr, icmp_h);

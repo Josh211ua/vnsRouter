@@ -131,8 +131,10 @@ int main(int argc, char **argv)
         strncpy(sr.template, template, 30);
 
     if(ruletable != NULL) {
+        Debug("Loading rule table\n");
         sr_load_rlt(&sr, ruletable);
     } else {
+        Debug("Not Loading rule table\n");
         sr.flowTable = NULL;
     }
 
