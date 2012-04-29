@@ -646,6 +646,7 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     }
     return NULL;
 }
+
 void addFlowToTable(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
     struct flowTableEntry* result = searchForFlow(sr, srcIp, srcPort, dstIp, dstPort, protocol);
@@ -653,10 +654,15 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         Debug("Adding flow for %s to %s\n", srcIp, dstIp);
         result = malloc(sizeof(struct flowTableEntry));
         strncpy(result->srcIP,srcIp,15);
+        result->srcIPw = false;
         result->srcPort = srcPort;
+        result->srcPortw = false;
         strncpy(result->dstIP,dstIp,15);
+        result->dstIPw = false;
         result->dstPort = dstPort;
+        result->dstPortw = false;
         result->ipProtocol = protocol;
+        result->ipProtow = false;
         result->ttl = time(NULL);
         result->next = sr->flowTable;
         sr->flowTable = result;
