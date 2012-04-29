@@ -36,10 +36,15 @@ struct sr_if;
 struct sr_rt;
 
 struct flowTableEntry {
+    bool srcIPw;
     char srcIP[15];
+    bool srcPortw;
     uint16_t srcPort;
+    bool dstIPw;
     char dstIP[15];
+    bool dstPortw;
     uint16_t dstPort;
+    bool ipProtow;
     uint8_t ipProtocol;
     bool isImmortal;
     time_t ttl;
