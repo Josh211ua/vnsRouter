@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 
     printf("Using %s\n", VERSION_INFO);
 
-    while ((c = getopt(argc, argv, "ha:s:v:p:u:t:r:l:T:e:")) != EOF)
+    while ((c = getopt(argc, argv, "ha:s:v:p:u:t:r:l:T:e:b:")) != EOF)
     {
         switch (c)
         {
@@ -185,6 +185,7 @@ int main(int argc, char **argv)
         strncpy(sr.external, external, sr_IFACE_NAMELEN);
         Debug("Set external interface to %s.\n", external);
     } else {
+        Debug("Firewall Disabled\n");
         sr.firewall_enabled = false;
     }
 
