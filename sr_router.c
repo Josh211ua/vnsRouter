@@ -41,7 +41,8 @@ void printIpHeader(struct ip* iphdr);
 void printIcmpHeader(struct icmp_hdr* icmp_h);
 bool iAmDestination(struct in_addr* ip_src,struct sr_instance* sr);
 void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
-        struct sr_ethernet_hdr* e_hdr, struct ip*);
+        struct sr_ethernet_hdr* e_hdr, struct ip*, uint8_t type, uint8_t code);
+uint8_t decrement_ttl(struct ip *ip_hdr);
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr);
 void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
@@ -196,7 +197,7 @@ void sr_handlepacket(struct sr_instance* sr,
         // Not ICMP
         else {
             if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
-                sendIcmpError(sr, interface, packet, e_hdr, ip_hdr);
+                sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 3, 3);
             } else {
                 route(sr, packet, len, interface, e_hdr, ip_hdr);
             }
@@ -476,7 +477,8 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
 }
 
 void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
-        struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr) {
+        struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr, 
+        uint8_t type, uint8_t code) {
 
     int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr) + sizeof(struct ip) + 8;
     uint8_t buf[len];
@@ -506,8 +508,8 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
     // Change Icmp Header
     struct icmp_hdr *newi_hdr = (struct icmp_hdr*) (buf +
             sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
-    newi_hdr->icmp_type = 3;
-    newi_hdr->icmp_code = 3;
+    newi_hdr->icmp_type = type;
+    newi_hdr->icmp_code = code;
     newi_hdr->icmp_sum = 0;
     newi_hdr->icmp_ident = 0;
     newi_hdr->icmp_seqnum = 0;
@@ -522,7 +524,7 @@ void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
             (uint8_t*)newi_hdr);
 
     sr_send_packet(sr, buf, len, interface);
-    Debug("Sent ICMP port unreachable\n");
+    Debug("Sent ICMP type:%u code:%u.\n", type, code);
 }
 
 struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
@@ -547,12 +549,24 @@ struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
     return default_rt;
 }
 
+uint8_t decrement_ttl(struct ip *ip_hdr) {
+    if(ip_hdr->ip_ttl == 0) {
+        return 0;
+    }
+    ip_hdr->ip_ttl = ip_hdr->ip_ttl - 1;
+    return ip_hdr->ip_ttl;
+}
+
 void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         char* interface, struct sr_ethernet_hdr* e_hdr, struct ip* ip_hdr) {
 
-    //const uint8_t * destmac = getarp(inet_ntoa(ip_hdr->ip_dst));
     struct sr_rt * rt_entry = get_rt_entry(sr, ip_hdr->ip_dst);
     if(rt_entry != NULL) {
+        if(decrement_ttl(ip_hdr) == 0) {
+            sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
+            return;
+        }
+
         struct sr_if *inter = sr_get_interface(sr, rt_entry->interface);
         // Create a new packet to queue
         struct waitingpacket *newpacket = malloc(sizeof(struct waitingpacket));
