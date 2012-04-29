@@ -4,7 +4,7 @@
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
 
-#define ARP_TIMEOUT 20
+#define ARP_CACHE_TIMEOUT 20
 
 struct arppair {
     uint32_t ip;
@@ -40,7 +40,7 @@ void removeOldEntries() {
     struct arppair *last = NULL;
     while(me != NULL) {
         // If not expired
-        if(difftime(now, me->created) < ARP_TIMEOUT) {
+        if(difftime(now, me->created) < ARP_CACHE_TIMEOUT) {
             // Keep Entry
             if(last == NULL) {
                 cache = me;
