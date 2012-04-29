@@ -673,3 +673,36 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         result->ttl = time(NULL);
     }
 }
+
+void resendArps(struct sr_instance *sr, struct sr_if *inter) {
+    struct waitingpacket *me = inter->queue;
+    struct waitingpacket *last = NULL;
+    time_t now = time(NULL);
+    while(me != NULL) {
+        if(difftime(now, me->arpt) > ARP_TIMEOUT) {
+            me->arpn = me->arpn + 1;
+            me->arpt = now;
+            if(me->arpt >= 5) {
+                struct sr_ethernet_hdr *e_hdr = 
+                    (struct sr_ethernet_hdr*) me->data;
+                struct ip *ip_hdr = (struct ip*) 
+                    (me->data + sizeof(struct sr_ethernet_hdr));
+                //ICMP Host Unreachable
+                sendIcmpError(sr, inter->name, me->data, e_hdr, ip_hdr, 3, 1);
+                // Remove from queue
+                if(last == NULL) {
+                    inter->queue = me->next;
+                } else {
+                    last->next = me->next;
+                }
+            } else {
+                sendArpRequest(sr, inter->ip, 
+                        *((struct in_addr*) &me->ip_dst), inter->name);
+                last = me;
+            }
+        } else {
+            last = me;
+        }
+        me = me->next;
+    }
+}
