@@ -238,6 +238,23 @@ void prettyprintIP(uint32_t ipaddr){
     free(pretty);
 }
 
+uint8_t parseShortFromString(char* src, uint len){
+    uint8_t total = 0;
+    for(int i = 0; i < len; i++){
+        total *= 10;
+        total += src[i] - '0';
+    }
+    return total;
+}
+
+uint16_t parseLongFromString(char* src, uint len){
+    uint16_t total = 0;
+    for(int i = 0; i < len; i++){
+        total *= 10;
+        total += src[i] - '0';
+    }
+    return total;
+}
 
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
 
@@ -481,7 +498,7 @@ void printIcmpHeader(struct icmp_hdr* icmp_h) {
 }
 
 void sendIcmpError(struct sr_instance* sr, char* interface, uint8_t *packet,
-        struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr, 
+        struct sr_ethernet_hdr* e_hdr, struct ip *ip_hdr,
         uint8_t type, uint8_t code) {
 
     int len = sizeof(struct sr_ethernet_hdr) + sizeof(struct ip) + sizeof(struct icmp_hdr) + sizeof(struct ip) + 8;
