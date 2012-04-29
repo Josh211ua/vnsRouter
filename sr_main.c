@@ -46,6 +46,7 @@ extern char* optarg;
 #define DEFAULT_HOST "vrhost"
 #define DEFAULT_SERVER "171.67.71.18"
 #define DEFAULT_RTABLE "rtable"
+#define DEFAULT_RULETABLE "ruletable"
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
@@ -114,6 +115,7 @@ int main(int argc, char **argv)
                 external = optarg;
                 break;
             case 'b':
+                Debug("got option b %s\n", optarg);
                 ruletable = optarg;
                 break;
         } /* switch */

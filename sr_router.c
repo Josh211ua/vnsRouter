@@ -187,7 +187,7 @@ void sr_handlepacket(struct sr_instance* sr,
             //        Debug("Decrement TTD not implemented (Don't forget to recalculate checksum)");
             //        route(sr, packet, len, interface, e_hdr, ip_hdr);
             //    }
-            //} else 
+            //} else
             if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
                 // Echo Request:
                 if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
@@ -408,7 +408,7 @@ void respondToIcmpEcho(struct sr_instance* sr, uint8_t* packet,
             (uint8_t*) (buf + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip)));
 
     sr_send_packet(sr, buf,len, interface);
-    Debug("Sent Icmp Echo Reply\n");
+    Debug("Sent Icmp Echo Reply on interface %s to %s\n", interface, inet_ntoa(newip_hdr->ip_dst));
 }
 
 bool iAmDestination(struct in_addr* ip_dest,struct sr_instance* sr) {
@@ -542,7 +542,7 @@ struct sr_rt * get_rt_entry(struct sr_instance* sr, struct in_addr dst) {
 
     char dest[15];
     strncpy(dest, inet_ntoa(dst), 15);
-    //Debug("Searching routing table for %s\n", dest);
+    Debug("Searching routing table for %s\n", dest);
     while(rt_walker)
     {
         if(memcmp(&dst, &(rt_walker->dest), sizeof(dst))==0) {
@@ -579,7 +579,7 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         struct sr_if *inter = sr_get_interface(sr, rt_entry->interface);
         // Create a new packet to queue
         struct waitingpacket *newpacket = malloc(sizeof(struct waitingpacket));
-        newpacket->ip_dst = *((uint32_t*) &(rt_entry->gw));
+        newpacket->ip_dst = *((uint32_t*) &(ip_hdr->ip_dst));
         newpacket->data = calloc(sizeof(uint8_t), len);
         memcpy(newpacket->data, packet, len);
         newpacket->len = len;
@@ -587,6 +587,7 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
         newpacket->arpn = 0;
         newpacket->next = inter->queue;
 
+        Debug("sending packet on %s to %s\n", rt_entry->interface, inet_ntoa(ip_hdr->ip_dst));
         const uint8_t *ha = getarp(newpacket->ip_dst);
         if(ha != NULL) {
             sendOff(sr, newpacket, inter, ha);
@@ -700,9 +701,9 @@ void resendArps(struct sr_instance *sr, struct sr_if *inter) {
             me->arpn = me->arpn + 1;
             me->arpt = now;
             if(me->arpt >= 5) {
-                struct sr_ethernet_hdr *e_hdr = 
+                struct sr_ethernet_hdr *e_hdr =
                     (struct sr_ethernet_hdr*) me->data;
-                struct ip *ip_hdr = (struct ip*) 
+                struct ip *ip_hdr = (struct ip*)
                     (me->data + sizeof(struct sr_ethernet_hdr));
                 //ICMP Host Unreachable
                 sendIcmpError(sr, inter->name, me->data, e_hdr, ip_hdr, 3, 1);
@@ -713,7 +714,7 @@ void resendArps(struct sr_instance *sr, struct sr_if *inter) {
                     last->next = me->next;
                 }
             } else {
-                sendArpRequest(sr, inter->ip, 
+                sendArpRequest(sr, inter->ip,
                         *((struct in_addr*) &me->ip_dst), inter->name);
                 last = me;
             }
