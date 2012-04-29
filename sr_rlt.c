@@ -20,7 +20,7 @@
 #define __USE_MISC 1 /* force linux to show inet_aton */
 #include <arpa/inet.h>
 
-#include "sr_rt.h"
+#include "sr_rlt.h"
 #include "sr_router.h"
 
 uint8_t parseShortFromString(char* src, uint len);

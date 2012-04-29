@@ -33,6 +33,7 @@
 #include "sr_dumper.h"
 #include "sr_router.h"
 #include "sr_rt.h"
+#include "sr_rlt.h"
 
 extern char* optarg;
 
@@ -45,6 +46,7 @@ extern char* optarg;
 #define DEFAULT_HOST "vrhost"
 #define DEFAULT_SERVER "171.67.71.18"
 #define DEFAULT_RTABLE "rtable"
+#define DEFAULT_RULETABLE "ruletable"
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
@@ -64,6 +66,7 @@ int main(int argc, char **argv)
     char *user = 0;
     char *server = DEFAULT_SERVER;
     char *rtable = DEFAULT_RTABLE;
+    char *ruletable = DEFAULT_RULETABLE;
     char *template = NULL;
     unsigned int port = DEFAULT_PORT;
     unsigned int topo = DEFAULT_TOPO;
@@ -111,6 +114,9 @@ int main(int argc, char **argv)
             case 'e':
                 external = optarg;
                 break;
+            case 'b':
+                ruletable = optarg;
+                break;
         } /* switch */
     } /* -- while -- */
 
@@ -124,6 +130,8 @@ int main(int argc, char **argv)
     }
     else
         strncpy(sr.template, template, 30);
+
+    sr_load_rlt(&sr, ruletable);
 
     sr.topo_id = topo;
     strncpy(sr.host,host,32);
