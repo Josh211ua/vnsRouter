@@ -238,23 +238,7 @@ void prettyprintIP(uint32_t ipaddr){
     free(pretty);
 }
 
-uint8_t parseShortFromString(char* src, uint len){
-    uint8_t total = 0;
-    for(int i = 0; i < len; i++){
-        total *= 10;
-        total += src[i] - '0';
-    }
-    return total;
-}
 
-uint16_t parseLongFromString(char* src, uint len){
-    uint16_t total = 0;
-    for(int i = 0; i < len; i++){
-        total *= 10;
-        total += src[i] - '0';
-    }
-    return total;
-}
 
 void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct sr_instance* sr,char* interface){
 
