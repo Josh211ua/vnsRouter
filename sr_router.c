@@ -52,6 +52,8 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
 void addFlowToTable(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIP, uint16_t dstPort, uint8_t protocol);
 char* prettyprintIPHelper(uint32_t ipaddr);
+void resendAllArps(struct sr_instance *sr);
+void resendArps(struct sr_instance *sr, struct sr_if *inter);
 
 const double DEATH = 5;
 const unsigned char BROADCAST_ADDR[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
@@ -107,6 +109,8 @@ void sr_handlepacket(struct sr_instance* sr,
     assert(sr);
     assert(packet);
     assert(interface);
+
+    resendAllArps(sr);
 
     //figure out what kind of packet we got
     struct sr_ethernet_hdr* e_hdr = 0;
@@ -671,6 +675,14 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
     }
     else {
         result->ttl = time(NULL);
+    }
+}
+
+void resendAllArps(struct sr_instance *sr) {
+    struct sr_if* inter = sr->if_list;
+    while(inter != NULL) {
+        resendArps(sr, inter);
+        inter = inter->next;
     }
 }
 
