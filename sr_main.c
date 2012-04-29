@@ -46,7 +46,6 @@ extern char* optarg;
 #define DEFAULT_HOST "vrhost"
 #define DEFAULT_SERVER "171.67.71.18"
 #define DEFAULT_RTABLE "rtable"
-#define DEFAULT_RULETABLE "ruletable"
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
@@ -66,7 +65,7 @@ int main(int argc, char **argv)
     char *user = 0;
     char *server = DEFAULT_SERVER;
     char *rtable = DEFAULT_RTABLE;
-    char *ruletable = DEFAULT_RULETABLE;
+    char *ruletable = NULL;
     char *template = NULL;
     unsigned int port = DEFAULT_PORT;
     unsigned int topo = DEFAULT_TOPO;
@@ -131,7 +130,11 @@ int main(int argc, char **argv)
     else
         strncpy(sr.template, template, 30);
 
-    sr_load_rlt(&sr, ruletable);
+    if(ruletable != NULL) {
+        sr_load_rlt(&sr, ruletable);
+    } else {
+        sr.flowTable = NULL;
+    }
 
     sr.topo_id = topo;
     strncpy(sr.host,host,32);
@@ -202,7 +205,7 @@ static void usage(char* argv0)
     printf("Format: %s [-h] [-v host] [-s server] [-p port] \n",argv0);
     printf("           [-T template_name] [-u username] [-a auth_key_filename]\n");
     printf("           [-t topo id] [-r routing table] \n");
-    printf("           [-l log file] [-e external interface]\n");
+    printf("           [-l log file] [-e external interface] [-b rule table]\n");
     printf("   defaults server=%s port=%d host=%s  \n",
             DEFAULT_SERVER, DEFAULT_PORT, DEFAULT_HOST );
 } /* -- usage -- */
