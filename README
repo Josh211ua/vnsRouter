@@ -1,0 +1,35 @@
+CS 600.444 Group 7
+Project 3: VNS Router
+Members: Josh Smith, Leah Hanson, Matt Morris
+
+We have implemented all features of the assignment and no additional features.
+
+Compililation:
+Compile using the make command.
+
+Running:
+In order to run, specify ./sr -s vns-2.stanford.edu -t 958
+Also make sure to use appropriate entries of -u and -a to properly authenticate yourself.
+
+Options:
+Firewall: By default the firewall is disabled. In order to turn on the routing table specify -e <interface name>.
+Rule Table: By default no rules are used. In order to use a rule table, specify -b <rule table file name>.
+The rule table file should contain new-line separated entries of the following form:
+<sourceIP> <sourcePort> <dstIP> <dstPort> <proto>
+The IP's should be specified as A.B.C.D, and none of their sections should contain leading 0's.
+Any of the fields of the rule table can be replaced by a * to denote that this entry is a wildcard.
+
+Implementation Choices Made:
+ARP_TIMEOUT = time until the router resends an arp request = 1 second.
+              Note the router does not use a timer, so it will not resend an arp request until the first time it receives a packet after 1 second has passed.
+ARP_CACHE_TIMEOUT = time until arp cache entry expires = 20 seconds
+INIT_TTL = Initial time to live for ICMP packets generated at the router = 255
+           This is the maximum value and it seemed best to try to make sure our ICMP packets reach their destination.
+MAX_FLOWS = The maximum number of flows allowed in our flow table = 10000.
+            We saw no reason to limit the number of flows except for the time take to check if an entry is in the flow.
+
+Note, we only maintain a single flow table entry for both directions of a flow. A packet coming in either direction will refresh the flow table entry extending its TTD.
+
+Traceroute: Since there seem to be many versions of traceroute we were a bit unclear on which to support.
+We have instructed our router to decrement the TTL of every IP packet, and to send back an ICMP timeout if the TTL is 1 or 0.
+We believe this should support a basic traceroute call.
