@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------
  * file:  sr_inface.
- * date:  Sun Oct 06 14:13:13 PDT 2002 
- * Contact: casado@stanford.edu 
+ * date:  Sun Oct 06 14:13:13 PDT 2002
+ * Contact: casado@stanford.edu
  *
  * Description:
  *
@@ -25,7 +25,7 @@
 #include "sr_if.h"
 #include "sr_router.h"
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_get_interface
  * Scope: Global
  *
@@ -54,7 +54,7 @@ struct sr_if* sr_get_interface(struct sr_instance* sr, const char* name)
     return 0;
 } /* -- sr_get_interface -- */
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_add_interface(..)
  * Scope: Global
  *
@@ -92,13 +92,13 @@ void sr_add_interface(struct sr_instance* sr, const char* name)
     if_walker->queue = NULL;
     strncpy(if_walker->name,name,sr_IFACE_NAMELEN);
     if_walker->next = 0;
-} /* -- sr_add_interface -- */ 
+} /* -- sr_add_interface -- */
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_sat_ether_addr(..)
  * Scope: Global
  *
- * set the ethernet address of the LAST interface in the interface list 
+ * set the ethernet address of the LAST interface in the interface list
  *
  *---------------------------------------------------------------------*/
 
@@ -108,7 +108,7 @@ void sr_set_ether_addr(struct sr_instance* sr, const unsigned char* addr)
 
     /* -- REQUIRES -- */
     assert(sr->if_list);
-    
+
     if_walker = sr->if_list;
     while(if_walker->next)
     {if_walker = if_walker->next; }
@@ -118,7 +118,7 @@ void sr_set_ether_addr(struct sr_instance* sr, const unsigned char* addr)
 
 } /* -- sr_set_ether_addr -- */
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_set_ether_ip(..)
  * Scope: Global
  *
@@ -132,7 +132,7 @@ void sr_set_ether_ip(struct sr_instance* sr, uint32_t ip_nbo)
 
     /* -- REQUIRES -- */
     assert(sr->if_list);
-    
+
     if_walker = sr->if_list;
     while(if_walker->next)
     {if_walker = if_walker->next; }
@@ -142,7 +142,7 @@ void sr_set_ether_ip(struct sr_instance* sr, uint32_t ip_nbo)
 
 } /* -- sr_set_ether_ip -- */
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_print_if_list(..)
  * Scope: Global
  *
@@ -161,17 +161,17 @@ void sr_print_if_list(struct sr_instance* sr)
     }
 
     if_walker = sr->if_list;
-    
+
     sr_print_if(if_walker);
     while(if_walker->next)
     {
-        if_walker = if_walker->next; 
+        if_walker = if_walker->next;
         sr_print_if(if_walker);
     }
 
 } /* -- sr_print_if_list -- */
 
-/*--------------------------------------------------------------------- 
+/*---------------------------------------------------------------------
  * Method: sr_print_if(..)
  * Scope: Global
  *

@@ -111,7 +111,7 @@ void sr_handlepacket(struct sr_instance* sr,
     struct sr_ethernet_hdr* e_hdr = 0;
     e_hdr = (struct sr_ethernet_hdr*)packet;
 
-    Debug("*** -> Received packet of length %d \n",len);
+    // Debug("*** -> Received packet of length %d \n",len);
     Debug("Ethernet Header:\n");
     //printEthernetHeader(e_hdr);
 
@@ -604,12 +604,10 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
 }
 
 bool compareIPandPort(char * Ip1, char * Ip2, uint16_t port1, uint16_t port2){
-    Debug("comparing: %s:%u to %s:%u\n", Ip1, port1, Ip2, port2);
     return((strncmp(Ip1, Ip2, 15) == 0)&&(port1 == port2));
 }
 
 void deleteFTE(struct flowTableEntry* doomed){
-    Debug("Deleted flow for %s to %s\n", doomed->srcIP, doomed->dstIP);
     free(doomed);
 }
 
@@ -617,7 +615,6 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
-    Debug("comparing: %s:%u %s:%u %u\n", srcIp, srcPort, dstIp, dstPort, protocol);
     while(current != NULL){
         if(!current->isImmortal && difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
@@ -663,7 +660,6 @@ void addFlowToTable(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
     struct flowTableEntry* result = searchForFlow(sr, srcIp, srcPort, dstIp, dstPort, protocol);
     if(result == NULL){
-        Debug("Adding flow for %s to %s\n", srcIp, dstIp);
         result = malloc(sizeof(struct flowTableEntry));
         strncpy(result->srcIP,srcIp,15);
         result->srcIPw = false;

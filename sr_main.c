@@ -115,7 +115,6 @@ int main(int argc, char **argv)
                 external = optarg;
                 break;
             case 'b':
-                Debug("got option b %s\n", optarg);
                 ruletable = optarg;
                 break;
         } /* switch */
