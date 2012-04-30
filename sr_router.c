@@ -619,41 +619,6 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     struct flowTableEntry* prev = NULL;
     Debug("comparing: %s:%u %s:%u %u\n", srcIp, srcPort, dstIp, dstPort, protocol);
     while(current != NULL){
-        if(current->isImmortal){
-            Debug("to ");
-            bool flag = true;
-            if(current->srcIPw){
-                Debug("srcIPwild:");
-            }else{
-                flag = flag && (strncmp(current->srcIP, srcIp, 15)==0);
-                Debug("%s:",current->srcIP);
-            } Debug(" %s\n", flag ? "true":"false");
-            if(current->srcPortw){
-                Debug("srcPortwild, ");
-            }else{
-                flag = flag && (current->srcPort == srcPort);
-                Debug("%u, ",current->srcPort);
-            } Debug(" %s\n", flag ? "true":"false");
-            if(current->dstIPw){
-                Debug("dstIP wild: ");
-            }else{
-                flag = flag && (strncmp(current->srcIP, srcIp, 15)==0);
-                Debug("%s:",current->dstIP);
-            } Debug(" %s\n", flag ? "true":"false");
-            if(current->dstPortw){
-                Debug("dstPortwild, ");
-            }else{
-                flag = flag && (current->dstPort == dstPort);
-                Debug("%u, ",current->dstPort);
-            } Debug(" %s\n", flag ? "true":"false");
-            if(current->ipProtow){
-                Debug("ipproto wild");
-            } else{
-                flag = flag && (current->ipProtocol == protocol);
-                Debug("%u", current->ipProtocol);
-            }
-            Debug(" %s\n", flag ? "true":"false");
-        }
         if(!current->isImmortal && difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
