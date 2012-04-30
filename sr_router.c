@@ -73,12 +73,6 @@ void sr_init(struct sr_instance* sr)
     /* Add initialization code here! */
     init_arpcache();
     sr->flowTable = NULL;
-//    Debug("Mac for 171.67.242.68 is ");
-//    DebugMAC(getarp("171.67.242.68"));
-//    Debug("\n");
-//    Debug("Mac for 171.67.242.70 is ");
-//    DebugMAC(getarp("171.67.242.70"));
-//    Debug("\n");
 
 } /* -- sr_init -- */
 
@@ -110,7 +104,7 @@ void sr_handlepacket(struct sr_instance* sr,
     assert(packet);
     assert(interface);
 
-    //resendAllArps(sr);
+    resendAllArps(sr);
 
     //figure out what kind of packet we got
     struct sr_ethernet_hdr* e_hdr = 0;
@@ -267,18 +261,7 @@ void sendArpReply(struct sr_ethernet_hdr* ehdr, struct sr_arphdr* arph, struct s
     // newa_hdr->ar_tha = arph->ar_sha;
     memcpy(newa_hdr->ar_tha,arph->ar_sha,6);
 
-    //Debug("\nPacket to send:\n");
-    //Debug("Ethernet Header:\n");
-    //printEthernetHeader(newe_hdr);
-    //printf("Arp Header:\n");
-    //printArpHeader(newa_hdr);
-
-
     //then send
-    // int sr_send_packet(struct sr_instance* sr /* borrowed */,
-    //                      uint8_t* buf /* borrowed */ ,
-    //                      unsigned int len,
-    //                      const char* iface /* borrowed */)
     sr_send_packet(sr, buf,len, interface);
     Debug("Sent Arp Reply\n");
 }

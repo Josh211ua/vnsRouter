@@ -2,7 +2,9 @@ CS 600.444 Group 7
 Project 3: VNS Router
 Members: Josh Smith, Leah Hanson, Matt Morris
 
-We have implemented all features of the assignment and no additional features.
+We have implemented all features of the assignment except:
+1. Wildcards in the rule table
+2. Traceroutes to the router (Note a traceroute through the router will send things from the other side back, it just won't include our router in the route.)
 
 Compililation:
 Compile using the make command.

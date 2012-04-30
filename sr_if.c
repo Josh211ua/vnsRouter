@@ -75,6 +75,7 @@ void sr_add_interface(struct sr_instance* sr, const char* name)
     {
         sr->if_list = (struct sr_if*)malloc(sizeof(struct sr_if));
         assert(sr->if_list);
+        sr->if_list->queue = NULL;
         sr->if_list->next = 0;
         strncpy(sr->if_list->name,name,sr_IFACE_NAMELEN);
         return;
@@ -88,6 +89,7 @@ void sr_add_interface(struct sr_instance* sr, const char* name)
     if_walker->next = (struct sr_if*)malloc(sizeof(struct sr_if));
     assert(if_walker->next);
     if_walker = if_walker->next;
+    if_walker->queue = NULL;
     strncpy(if_walker->name,name,sr_IFACE_NAMELEN);
     if_walker->next = 0;
 } /* -- sr_add_interface -- */ 
