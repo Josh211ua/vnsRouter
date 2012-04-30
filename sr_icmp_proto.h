@@ -10,4 +10,12 @@ struct icmp_hdr
     uint16_t icmp_seqnum;
 } __attribute__ ((packed)) ;
 
+struct tcpudp_hdr
+{
+    uint16_t srcPort;
+    uint16_t dstPort;
+    //unimportant stuff
+};
+
+
 #endif

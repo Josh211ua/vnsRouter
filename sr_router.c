@@ -143,18 +143,26 @@ void sr_handlepacket(struct sr_instance* sr,
         struct ip* ip_hdr = 0;
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
         Debug("\nPacket was an IP:\n");
-        
+
         //if(decrement_ttl(ip_hdr) == 0) {
         //    sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
         //    return;
         //}
-        
+
         if(sr->firewall_enabled) {
             char* t1 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_src);
             char* t2 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_dst);
+            uint16_t port1 = 0;
+            uint16_t port2 = 0;
+            if(ip_hdr->ip_p == 6 || ip_hdr->ip_p == 17){
+                struct tcpudp_hdr* tuhdr = (struct tcpudp_hdr*)(packet + sizeof(struct sr_ethernet_hdr) + sizeof(struct ip));
+                port1 = ntohs(tuhdr->srcPort);
+                port2 = ntohs(tuhdr->dstPort);
+            }
+
             if(strncmp(sr->external, interface, sr_IFACE_NAMELEN) == 0) {
                 struct flowTableEntry* result = searchForFlow(sr,
-                    t1,0, t2,0,ip_hdr->ip_p);
+                    t1,port1, t2,port2,ip_hdr->ip_p);
                 if(result == NULL){
                     Debug("Dropped packet into interface %s\n", interface);
                     free(t1);
@@ -163,7 +171,7 @@ void sr_handlepacket(struct sr_instance* sr,
                 }
                 Debug("Let a packet through the firewall");
             }
-            addFlowToTable(sr,t1,0, t2,0,ip_hdr->ip_p);
+            addFlowToTable(sr,t1,port1, t2,port2,ip_hdr->ip_p);
             free(t1);
             free(t2);
         }
@@ -596,6 +604,7 @@ void sendOff(struct sr_instance *sr, struct waitingpacket *pack,
 }
 
 bool compareIPandPort(char * Ip1, char * Ip2, uint16_t port1, uint16_t port2){
+    Debug("comparing: %s:%u to %s:%u\n", Ip1, port1, Ip2, port2);
     return((strncmp(Ip1, Ip2, 15) == 0)&&(port1 == port2));
 }
 
