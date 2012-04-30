@@ -11,6 +11,8 @@
  *
  **********************************************************************/
 
+#include "sr_rlt.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -72,7 +74,6 @@ void sr_init(struct sr_instance* sr)
 
     /* Add initialization code here! */
     init_arpcache();
-    sr->flowTable = NULL;
 
 } /* -- sr_init -- */
 
@@ -608,7 +609,7 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
     while(current != NULL){
-        if(difftime(time(NULL),current->ttl) > DEATH){
+        if(!current->isImmortal && difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
             }
