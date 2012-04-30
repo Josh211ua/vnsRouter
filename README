@@ -2,9 +2,9 @@ CS 600.444 Group 7
 Project 3: VNS Router
 Members: Josh Smith, Leah Hanson, Matt Morris
 
-We have implemented all features of the assignment except:
-1. Wildcards in the rule table
-2. Traceroutes to the router (Note a traceroute through the router will send things from the other side back, it just won't include our router in the route.)
+We have implemented all features of the assignment except Traceroutes to the router (Note a traceroute through the router will send things from the other side back, it just won't include our router in the route.)
+
+Our router has the added bonus of being able to hold an infinite number of flows in the flow table.
 
 Compililation:
 Compile using the make command.
@@ -15,6 +15,7 @@ Also make sure to use appropriate entries of -u and -a to properly authenticate 
 
 Options:
 Firewall: By default the firewall is disabled. In order to turn on the routing table specify -e <interface name>.
+For example, to make the outside world outside the firewall specify -e eth0.
 Rule Table: By default no rules are used. In order to use a rule table, specify -b <rule table file name>.
 The rule table file should contain new-line separated entries of the following form:
 <sourceIP> <sourcePort> <dstIP> <dstPort> <proto>
@@ -27,11 +28,5 @@ ARP_TIMEOUT = time until the router resends an arp request = 1 second.
 ARP_CACHE_TIMEOUT = time until arp cache entry expires = 20 seconds
 INIT_TTL = Initial time to live for ICMP packets generated at the router = 255
            This is the maximum value and it seemed best to try to make sure our ICMP packets reach their destination.
-MAX_FLOWS = The maximum number of flows allowed in our flow table = 10000.
-            We saw no reason to limit the number of flows except for the time take to check if an entry is in the flow.
 
 Note, we only maintain a single flow table entry for both directions of a flow. A packet coming in either direction will refresh the flow table entry extending its TTD.
-
-Traceroute: Since there seem to be many versions of traceroute we were a bit unclear on which to support.
-We have instructed our router to decrement the TTL of every IP packet, and to send back an ICMP timeout if the TTL is 1 or 0.
-We believe this should support a basic traceroute call.
