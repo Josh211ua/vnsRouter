@@ -617,7 +617,43 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
         uint16_t srcPort, char * dstIp, uint16_t dstPort, uint8_t protocol){
     struct flowTableEntry* current = sr->flowTable;
     struct flowTableEntry* prev = NULL;
+    Debug("comparing: %s:%u %s:%u %u\n", srcIp, srcPort, dstIp, dstPort, protocol);
     while(current != NULL){
+        if(current->isImmortal){
+            Debug("to ");
+            bool flag = true;
+            if(current->srcIPw){
+                Debug("srcIPwild:");
+            }else{
+                flag = flag && (strncmp(current->srcIP, srcIp, 15)==0);
+                Debug("%s:",current->srcIP);
+            } Debug(" %s\n", flag ? "true":"false");
+            if(current->srcPortw){
+                Debug("srcPortwild, ");
+            }else{
+                flag = flag && (current->srcPort == srcPort);
+                Debug("%u, ",current->srcPort);
+            } Debug(" %s\n", flag ? "true":"false");
+            if(current->dstIPw){
+                Debug("dstIP wild: ");
+            }else{
+                flag = flag && (strncmp(current->srcIP, srcIp, 15)==0);
+                Debug("%s:",current->dstIP);
+            } Debug(" %s\n", flag ? "true":"false");
+            if(current->dstPortw){
+                Debug("dstPortwild, ");
+            }else{
+                flag = flag && (current->dstPort == dstPort);
+                Debug("%u, ",current->dstPort);
+            } Debug(" %s\n", flag ? "true":"false");
+            if(current->ipProtow){
+                Debug("ipproto wild");
+            } else{
+                flag = flag && (current->ipProtocol == protocol);
+                Debug("%u", current->ipProtocol);
+            }
+            Debug(" %s\n", flag ? "true":"false");
+        }
         if(!current->isImmortal && difftime(time(NULL),current->ttl) > DEATH){
             if(prev == NULL){
                 sr->flowTable = current->next;
@@ -628,6 +664,18 @@ struct flowTableEntry * searchForFlow(struct sr_instance* sr, char * srcIp,
             struct flowTableEntry* temp = current;
             current = current->next;
             deleteFTE(temp);
+        }
+        else if(current->isImmortal){
+            if(
+                (current->srcIPw || strncmp(current->srcIP, srcIp, 15)==0) &&
+                    (current->srcPortw || current->srcPort == srcPort) &&
+                    (current->dstIPw || strncmp(current->dstIP, dstIp, 15)==0) &&
+                    (current->dstPortw || current->dstPort == dstPort)){
+                return current;
+            }else {
+                prev = current;
+                current = current->next;
+            }
         }
         else if(((compareIPandPort(current->srcIP, srcIp,current->srcPort,srcPort) &&
             compareIPandPort(current->dstIP, dstIp,current->srcPort,dstPort))
