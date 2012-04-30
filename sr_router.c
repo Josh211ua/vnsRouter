@@ -106,15 +106,12 @@ void sr_handlepacket(struct sr_instance* sr,
         char* interface/* lent */)
 {
     /* REQUIRES */
-    Debug("1");
     assert(sr);
     assert(packet);
     assert(interface);
 
-    Debug("2");
-    resendAllArps(sr);
+    //resendAllArps(sr);
 
-    Debug("3");
     //figure out what kind of packet we got
     struct sr_ethernet_hdr* e_hdr = 0;
     e_hdr = (struct sr_ethernet_hdr*)packet;
@@ -571,15 +568,15 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
 
     struct sr_rt * rt_entry = get_rt_entry(sr, ip_hdr->ip_dst);
     if(rt_entry != NULL) {
-        if(decrement_ttl(ip_hdr) == 0) {
-            sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
-            return;
-        }
+        //if(decrement_ttl(ip_hdr) == 0) {
+        //    sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
+        //    return;
+        //}
 
         struct sr_if *inter = sr_get_interface(sr, rt_entry->interface);
         // Create a new packet to queue
         struct waitingpacket *newpacket = malloc(sizeof(struct waitingpacket));
-        newpacket->ip_dst = *((uint32_t*) &(ip_hdr->ip_dst));
+        newpacket->ip_dst = *((uint32_t*) &(rt_entry->gw));
         newpacket->data = calloc(sizeof(uint8_t), len);
         memcpy(newpacket->data, packet, len);
         newpacket->len = len;
