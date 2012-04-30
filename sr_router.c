@@ -148,7 +148,12 @@ void sr_handlepacket(struct sr_instance* sr,
         struct ip* ip_hdr = 0;
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
         Debug("\nPacket was an IP:\n");
-
+        
+        if(decrement_ttl(ip_hdr) == 0) {
+            sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
+            return;
+        }
+        
         if(sr->firewall_enabled) {
             char* t1 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_src);
             char* t2 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_dst);
@@ -177,14 +182,6 @@ void sr_handlepacket(struct sr_instance* sr,
             //printIcmpHeader(icmp_h);
 
             // Case on ICMP Type:
-            //if (icmp_h->icmp_type == 30 && icmp_h->icmp_code == 0) {
-            //    // Traceroute:
-            //    Debug("Reply to Traceroute not implemented");
-            //    if(!iAmDestination(&(ip_hdr->ip_dst), sr)) {
-            //        Debug("Decrement TTD not implemented (Don't forget to recalculate checksum)");
-            //        route(sr, packet, len, interface, e_hdr, ip_hdr);
-            //    }
-            //} else
             if(icmp_h->icmp_type == 8 && icmp_h->icmp_code == 0) {
                 // Echo Request:
                 if(iAmDestination(&(ip_hdr->ip_dst), sr)) {
@@ -560,6 +557,10 @@ uint8_t decrement_ttl(struct ip *ip_hdr) {
         return 0;
     }
     ip_hdr->ip_ttl = ip_hdr->ip_ttl - 1;
+
+    // Recalculate checksum
+    ip_hdr->ip_sum = 0;
+    ip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)ip_hdr);
     return ip_hdr->ip_ttl;
 }
 
@@ -568,10 +569,6 @@ void route(struct sr_instance* sr, uint8_t* packet, unsigned int len,
 
     struct sr_rt * rt_entry = get_rt_entry(sr, ip_hdr->ip_dst);
     if(rt_entry != NULL) {
-        //if(decrement_ttl(ip_hdr) == 0) {
-        //    sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
-        //    return;
-        //}
 
         struct sr_if *inter = sr_get_interface(sr, rt_entry->interface);
         // Create a new packet to queue
