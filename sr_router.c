@@ -149,10 +149,10 @@ void sr_handlepacket(struct sr_instance* sr,
         ip_hdr = (struct ip*) (packet + sizeof(struct sr_ethernet_hdr));
         Debug("\nPacket was an IP:\n");
         
-        if(decrement_ttl(ip_hdr) == 0) {
-            sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
-            return;
-        }
+        //if(decrement_ttl(ip_hdr) == 0) {
+        //    sendIcmpError(sr, interface, packet, e_hdr, ip_hdr, 11, 0);
+        //    return;
+        //}
         
         if(sr->firewall_enabled) {
             char* t1 = prettyprintIPHelper(*(uint32_t*)&ip_hdr->ip_src);
@@ -559,8 +559,8 @@ uint8_t decrement_ttl(struct ip *ip_hdr) {
     ip_hdr->ip_ttl = ip_hdr->ip_ttl - 1;
 
     // Recalculate checksum
-    ip_hdr->ip_sum = 0;
-    ip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)ip_hdr);
+    //ip_hdr->ip_sum = 0;
+    //ip_hdr->ip_sum = checksum(sizeof(struct ip), (uint8_t*)ip_hdr);
     return ip_hdr->ip_ttl;
 }
 
