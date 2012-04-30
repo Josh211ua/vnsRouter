@@ -5,4 +5,6 @@
 
 int sr_load_rlt(struct sr_instance* sr,const char* filename);
 
+void printRuleTable(struct sr_instance* sr);
+
 #endif

@@ -140,6 +140,8 @@ int main(int argc, char **argv)
         sr.flowTable = NULL;
     }
 
+    printRuleTable(&sr);
+
     sr.topo_id = topo;
     strncpy(sr.host,host,32);
     strncpy(sr.auth_key_fn,auth_key_file,64);

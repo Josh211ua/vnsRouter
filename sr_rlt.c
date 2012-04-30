@@ -25,6 +25,7 @@
 
 uint8_t parseShortFromString(char* src, uint len);
 uint16_t parseLongFromString(char* src, uint len);
+void printRuleTable(struct sr_instance* sr);
 
 /*--------------------------------------------------------------------- 
  * Method:
@@ -45,7 +46,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
     //struct in_addr mask_addr;
     
     struct flowTableEntry *nfte = NULL; 
-    struct flowTableEntry *fte = malloc(sizeof(struct flowTableEntry));
+    struct flowTableEntry *fte = NULL; 
     
     /* -- REQUIRES -- */
     assert(filename);
@@ -59,6 +60,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
     
     while( fgets(line,BUFSIZ,fp) != 0)
     {
+        fte = malloc(sizeof(struct flowTableEntry));
         fte->srcIPw = false;
         fte->srcPortw = false;
         fte->dstIPw = false;
@@ -67,7 +69,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
         fte->isImmortal = true;
         
         sscanf(line,"%s %s %s %s %s",srcIP,srcPort,dstIP,dstPort,ipProto);
-        if (strncmp(srcIP, "*", 1)) {
+        if (strncmp(srcIP, "*", 1) == 0) {
             fte->srcIPw = true;
         }
         else
@@ -75,7 +77,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
             strncpy(fte->srcIP, srcIP, 15);
         }
         
-        if (strncmp(srcPort, "*", 1)) {
+        if (strncmp(srcPort, "*", 1) == 0) {
             fte->srcPortw = true;
         }
         else
@@ -84,7 +86,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
             fte->srcPort = srcPortint; 
         }
         
-        if (strncmp(dstIP, "*", 1)) {
+        if (strncmp(dstIP, "*", 1) == 0) {
             fte->dstIPw = true;
         }
         else
@@ -92,7 +94,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
             strncpy(fte->dstIP, dstIP, 15);
         }
 
-        if (strncmp(dstPort, "*", 1)) {
+        if (strncmp(dstPort, "*", 1) == 0) {
             fte->dstPortw = true;
         }
         else
@@ -101,7 +103,7 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
             fte->dstPort = dstPint;
         }
         
-        if (strncmp(ipProto, "*", 1)) {
+        if (strncmp(ipProto, "*", 1) == 0) {
             fte->ipProtow = true;
         }
         else
@@ -126,7 +128,15 @@ int sr_load_rlt(struct sr_instance* sr,const char* filename)
     /* -- while -- *//* -- success -- */
 } /* -- sr_load_rt -- */
 
-
+void printRuleTable(struct sr_instance* sr) {
+    struct flowTableEntry* rule = sr->flowTable;
+    while(rule != NULL) {
+        Debug("Src:%s:%u\n", rule->srcIP, rule->srcPort);
+        Debug("Dst:%s:%u\n", rule->dstIP, rule->dstPort);
+        Debug("Proto:%u\n", rule->ipProtocol);
+        rule = rule->next;
+    }
+}
 uint8_t parseShortFromString(char* src, uint len){
     uint8_t total = 0;
     for(int i = 0; i < len; i++){
